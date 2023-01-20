@@ -1,13 +1,14 @@
 #pragma once
 
 #include <Windows.h>
-#include <d3d11.h>
+#include <d3d12.h>
+#include <dxgi1_6.h>
 #include <string>
 #include <wrl/client.h> // Used for ComPtr - a smart pointer for COM objects
 
 // We can include the correct library files here
 // instead of in Visual Studio settings if we want
-#pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 
 class DXCore
@@ -66,14 +67,30 @@ protected:
 	bool deviceSupportsTearing;
 	BOOL isFullscreen; // Due to alt+enter key combination (must be BOOL typedef)
 
-	// DirectX related objects and variables
-	D3D_FEATURE_LEVEL		dxFeatureLevel;
-	Microsoft::WRL::ComPtr<IDXGISwapChain>		swapChain;
-	Microsoft::WRL::ComPtr<ID3D11Device>		device;
-	Microsoft::WRL::ComPtr<ID3D11DeviceContext>	context;
+	// DirectX12 related objects and variables
+	static const unsigned int numBackBuffers = 2;
+	unsigned int currentSwapBuffer;
 
-	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> backBufferRTV;
-	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthBufferDSV;
+	D3D_FEATURE_LEVEL dxFeatureLevel;
+	Microsoft::WRL::ComPtr<ID3D12Device> device;
+	Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain;
+
+	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator;
+	Microsoft::WRL::ComPtr<ID3D12CommandQueue> commandQueue;
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList;
+
+	size_t rtvDescriptorSize;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> rtvHeap; //render target view
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> dsvHeap; //depth stencil view
+
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[numBackBuffers];
+	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> backBuffers[numBackBuffers];
+	Microsoft::WRL::ComPtr<ID3D12Resource> depthStencilBuffer;
+
+	D3D12_VIEWPORT viewport;
+	D3D12_RECT scissorRect;
 
 	// Helper function for allocating a console window
 	void CreateConsoleWindow(int bufferLines, int bufferColumns, int windowLines, int windowColumns);
