@@ -278,57 +278,73 @@ void Game::Update(float deltaTime, float totalTime)
 // --------------------------------------------------------
 void Game::Draw(float deltaTime, float totalTime)
 {
-	// Frame START
-	// - These things should happen ONCE PER FRAME
-	// - At the beginning of Game::Draw() before drawing *anything*
+	// Grab the current back buffer for this frame
+	Microsoft::WRL::ComPtr<ID3D12Resource> currentBackBuffer = backBuffers[currentSwapBuffer];
+	// Clearing the render target
 	{
-		// Clear the back buffer (erases what's on the screen)
-		const float bgColor[4] = { 0.4f, 0.6f, 0.75f, 1.0f }; // Cornflower Blue
-		context->ClearRenderTargetView(backBufferRTV.Get(), bgColor);
-
-		// Clear the depth buffer (resets per-pixel occlusion information)
-		context->ClearDepthStencilView(depthBufferDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+		// Transition the back buffer from present to render target
+		D3D12_RESOURCE_BARRIER rb = {};
+		rb.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		rb.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		rb.Transition.pResource = currentBackBuffer.Get();
+		rb.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+		rb.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		rb.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		commandList->ResourceBarrier(1, &rb);
+		// Background color (Cornflower Blue in this case) for clearing
+		float color[] = { 0.4f, 0.6f, 0.75f, 1.0f };
+		// Clear the RTV
+		commandList->ClearRenderTargetView(
+			rtvHandles[currentSwapBuffer],
+			color,
+			0, 0); // No scissor rectangles
+		// Clear the depth buffer, too
+		commandList->ClearDepthStencilView(
+			dsvHandle,
+			D3D12_CLEAR_FLAG_DEPTH,
+			1.0f, // Max depth = 1.0f
+			0, // Not clearing stencil, but need a value
+			0, 0); // No scissor rects
 	}
-
-	// DRAW geometry
-	// - These steps are generally repeated for EACH object you draw
-	// - Other Direct3D calls will also be necessary to do more complex things
-	UINT stride = sizeof(Vertex);
-	UINT offset = 0;
+	
+	// Rendering here!
 	{
-		// Set buffers in the input assembler (IA) stage
-		//  - Do this ONCE PER OBJECT, since each object may have different geometry
-		//  - For this demo, this step *could* simply be done once during Init()
-		//  - However, this needs to be done between EACH DrawIndexed() call
-		//     when drawing different geometry, so it's here as an example
-		context->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &stride, &offset);
-		context->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-
-		// Tell Direct3D to draw
-		//  - Begins the rendering pipeline on the GPU
-		//  - Do this ONCE PER OBJECT you intend to draw
-		//  - This will use all currently set Direct3D resources (shaders, buffers, etc)
-		//  - DrawIndexed() uses the currently set INDEX BUFFER to look up corresponding
-		//     vertices in the currently set VERTEX BUFFER
-		context->DrawIndexed(
-			3,     // The number of indices to use (we could draw a subset if we wanted)
-			0,     // Offset to the first index we want to use
-			0);    // Offset to add to each index when looking up vertices
+		// Set overall pipeline state
+		commandList->SetPipelineState(pipelineState.Get());
+		// Root sig (must happen before root descriptor table)
+		commandList->SetGraphicsRootSignature(rootSignature.Get());
+		// Set up other commands for rendering
+		commandList->OMSetRenderTargets(1, &rtvHandles[currentSwapBuffer], true, &dsvHandle);
+		commandList->RSSetViewports(1, &viewport);
+		commandList->RSSetScissorRects(1, &scissorRect);
+		commandList->IASetVertexBuffers(0, 1, &vbView);
+		commandList->IASetIndexBuffer(&ibView);
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		// Draw
+		commandList->DrawIndexedInstanced(3, 1, 0, 0, 0);
 	}
-
-	// Frame END
-	// - These should happen exactly ONCE PER FRAME
-	// - At the very end of the frame (after drawing *everything*)
+	
+	// Present
 	{
-		// Present the back buffer to the user
-		//  - Puts the results of what we've drawn onto the window
-		//  - Without this, the user never sees anything
+		// Transition back to present
+		D3D12_RESOURCE_BARRIER rb = {};
+		rb.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		rb.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		rb.Transition.pResource = currentBackBuffer.Get();
+		rb.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		rb.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+		rb.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		commandList->ResourceBarrier(1, &rb);
+		// Must occur BEFORE present
+		DX12Helper::GetInstance().CloseExecuteAndResetCommandList();
+		// Present the current back buffer
 		bool vsyncNecessary = vsync || !deviceSupportsTearing || isFullscreen;
 		swapChain->Present(
 			vsyncNecessary ? 1 : 0,
 			vsyncNecessary ? 0 : DXGI_PRESENT_ALLOW_TEARING);
-
-		// Must re-bind buffers after presenting, as they become unbound
-		context->OMSetRenderTargets(1, backBufferRTV.GetAddressOf(), depthBufferDSV.Get());
+		// Figure out which buffer is next
+		currentSwapBuffer++;
+		if (currentSwapBuffer >= numBackBuffers)
+			currentSwapBuffer = 0;
 	}
 }

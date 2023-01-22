@@ -3,6 +3,10 @@
 //declare the singleton
 DX12Helper* DX12Helper::instance;
 
+DX12Helper::~DX12Helper() {
+
+}
+
 // --------------------------------------------------------
 // Sets up the helper with required DX12 objects
 // --------------------------------------------------------

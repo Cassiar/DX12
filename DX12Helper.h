@@ -27,17 +27,20 @@ private:
 
 public:
 	~DX12Helper();
+	
 	// Initialization for singleton
 	void Initialize(
 		Microsoft::WRL::ComPtr<ID3D12Device> device,
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList,
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> commandQueue,
 		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator);
+
 	// Resource creation
 	Microsoft::WRL::ComPtr<ID3D12Resource> CreateStaticBuffer(
 		unsigned int dataStride,
 		unsigned int dataCount,
 		void* data);
+	
 	// Command list & synchronization
 	void CloseExecuteAndResetCommandList();
 	void WaitForGPU();
