@@ -1,4 +1,9 @@
 #include "Structs.hlsli"
+cbuffer ExternalData : register(0) {
+	matrix world;
+	matrix view;
+	matrix proj;
+}
 
 // --------------------------------------------------------
 // The entry point (main method) for our vertex shader

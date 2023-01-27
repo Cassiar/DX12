@@ -144,6 +144,7 @@
     <ClCompile Include="DX12Helper.cpp" />
     <ClCompile Include="DXCore.cpp" />
     <ClCompile Include="Game.cpp" />
+    <ClCompile Include="GameEntity.cpp" />
     <ClCompile Include="Helpers.cpp" />
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -155,6 +156,7 @@
     <ClInclude Include="DX12Helper.h" />
     <ClInclude Include="DXCore.h" />
     <ClInclude Include="Game.h" />
+    <ClInclude Include="GameEntity.h" />
     <ClInclude Include="Helpers.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="Mesh.h" />
@@ -174,6 +176,9 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Structs.hlsli" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
