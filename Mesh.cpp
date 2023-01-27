@@ -1,4 +1,5 @@
 #include "Mesh.h"
+#include "DX12Helper.h"
 #include <DirectXMath.h>
 #include <vector>
 #include <fstream>
@@ -206,6 +207,17 @@ Mesh::~Mesh() { }
 // --------------------------------------------------------
 Microsoft::WRL::ComPtr<ID3D11Buffer> Mesh::GetVertexBuffer() { return vb; }
 Microsoft::WRL::ComPtr<ID3D11Buffer> Mesh::GetIndexBuffer() { return ib; }
+
+D3D12_VERTEX_BUFFER_VIEW* Mesh::GetVertexBufferView()
+{
+	return &vbView;
+}
+
+D3D12_INDEX_BUFFER_VIEW* Mesh::GetIndexBufferView()
+{
+	return &ibView;
+}
+
 unsigned int Mesh::GetIndexCount() { return numIndices; }
 
 
@@ -234,7 +246,8 @@ void Mesh::CreateBuffers(Vertex* vertArray, size_t numVerts, unsigned int* index
 	vbd.StructureByteStride = 0;
 	D3D11_SUBRESOURCE_DATA initialVertexData = {};
 	initialVertexData.pSysMem = vertArray;
-	device->CreateBuffer(&vbd, &initialVertexData, vb.GetAddressOf());
+	//device->CreateBuffer(&vbd, &initialVertexData, vb.GetAddressOf());
+	vb = DX12Helper::GetInstance().CreateStaticBuffer(sizeof(Vertex), (UINT)numVerts, &initialVertexData);
 
 	// Create the index buffer
 	D3D11_BUFFER_DESC ibd = {};
@@ -247,6 +260,17 @@ void Mesh::CreateBuffers(Vertex* vertArray, size_t numVerts, unsigned int* index
 	D3D11_SUBRESOURCE_DATA initialIndexData = {};
 	initialIndexData.pSysMem = indexArray;
 	device->CreateBuffer(&ibd, &initialIndexData, ib.GetAddressOf());
+
+	ib = DX12Helper::GetInstance().CreateStaticBuffer(sizeof(unsigned int), (UINT)numIndices, &initialIndexData);
+
+	//setup the views
+	vbView.StrideInBytes = sizeof(Vertex);
+	vbView.SizeInBytes = sizeof(Vertex) * ARRAYSIZE(vertices);
+	vbView.BufferLocation = vb->GetGPUVirtualAddress();
+
+	ibView.Format = DXGI_FORMAT_R32_UINT;
+	ibView.SizeInBytes = sizeof(unsigned int) * ARRAYSIZE(indices);
+	ibView.BufferLocation = ib->GetGPUVirtualAddress();
 
 	// Save the indices
 	this->numIndices = (unsigned int)numIndices;

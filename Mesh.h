@@ -17,6 +17,10 @@ public:
 	// Getters for mesh data
 	Microsoft::WRL::ComPtr<ID3D11Buffer> GetVertexBuffer();
 	Microsoft::WRL::ComPtr<ID3D11Buffer> GetIndexBuffer();
+	//return a ptr to the struct
+	D3D12_VERTEX_BUFFER_VIEW* GetVertexBufferView();
+	//return a ptr to the struct
+	D3D12_INDEX_BUFFER_VIEW* GetIndexBufferView();
 	unsigned int GetIndexCount();
 
 	// Basic mesh drawing
@@ -24,8 +28,11 @@ public:
 
 private:
 	// D3D buffers
-	Microsoft::WRL::ComPtr<ID3D11Buffer> vb;
-	Microsoft::WRL::ComPtr<ID3D11Buffer> ib;
+	Microsoft::WRL::ComPtr<ID3D12Buffer> vb;
+	Microsoft::WRL::ComPtr<ID3D12Buffer> ib;
+	
+	D3D12_VERTEX_BUFFER_VIEW vbView;
+	D3D12_INDEX_BUFFER_VIEW ibView;
 
 	// Total indices in this mesh
 	unsigned int numIndices;
