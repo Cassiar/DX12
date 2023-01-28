@@ -1,5 +1,5 @@
 #include "Structs.hlsli"
-cbuffer ExternalData : register(0) {
+cbuffer ExternalData : register(b0) {
 	matrix world;
 	matrix view;
 	matrix proj;

@@ -10,6 +10,7 @@
 
 // For the DirectX Math library
 using namespace DirectX;
+using namespace std;
 
 // --------------------------------------------------------
 // Constructor
@@ -36,6 +37,16 @@ Game::Game(HINSTANCE hInstance)
 	
 	ibView = {};
 	vbView = {};
+
+	camera = make_shared<Camera>(
+		, 0.0f, -15.0f,	// Position
+		5.0f,				// Move speed (world units)
+		0.002f,				// Look speed (cursor movement pixels --> radians for rotation)
+		XM_PIDIV4,			// Field of view
+		(float)windowWidth / windowHeight,  // Aspect ratio
+		0.01f,				// Near clip
+		100.0f,				// Far clip
+		CameraProjectionType::Perspective);
 }
 
 // --------------------------------------------------------
@@ -65,28 +76,6 @@ void Game::Init()
 	//  - You'll be expanding and/or replacing these later
 	CreateRootSigAndPipelineState();
 	CreateGeometry();
-	
-	/*// Set initial graphics API state
-	//  - These settings persist until we change them
-	//  - Some of these, like the primitive topology & input layout, probably won't change
-	//  - Others, like setting shaders, will need to be moved elsewhere later
-	{
-		// Tell the input assembler (IA) stage of the pipeline what kind of
-		// geometric primitives (points, lines or triangles) we want to draw.  
-		// Essentially: "What kind of shape should the GPU draw with our vertices?"
-		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-		// Ensure the pipeline knows how to interpret all the numbers stored in
-		// the vertex buffer. For this course, all of your vertices will probably
-		// have the same layout, so we can just set this once at startup.
-		context->IASetInputLayout(inputLayout.Get());
-
-		// Set the active vertex and pixel shaders
-		//  - Once you start applying different shaders to different objects,
-		//    these calls will need to happen multiple times per frame
-		context->VSSetShader(vertexShader.Get(), 0, 0);
-		context->PSSetShader(pixelShader.Get(), 0, 0);
-	}*/
 }
 
 // --------------------------------------------------------
@@ -230,7 +219,7 @@ void Game::CreateRootSigAndPipelineState()
 // --------------------------------------------------------
 // Creates the geometry we're going to draw - a single triangle for now
 // --------------------------------------------------------
-void Game::CreateGeometry()
+void Game::LoadMeshes()
 {
 	// Create some temporary variables to represent colors
 	// - Not necessary, just makes things more readable
@@ -250,36 +239,55 @@ void Game::CreateGeometry()
 	//    knowing the exact size (in pixels) of the image/window/etc.  
 	// - Long story short: Resizing the window also resizes the triangle,
 	//    since we're describing the triangle in terms of the window itself
-	Vertex vertices[] =
-	{
-		{ XMFLOAT3(+0.0f, +0.5f, +0.0f), red },
-		{ XMFLOAT3(+0.5f, -0.5f, +0.0f), blue },
-		{ XMFLOAT3(-0.5f, -0.5f, +0.0f), green },
-	};
+	//Vertex vertices[] =
+	//{
+	//	{ XMFLOAT3(+0.0f, +0.5f, +0.0f), red },
+	//	{ XMFLOAT3(+0.5f, -0.5f, +0.0f), blue },
+	//	{ XMFLOAT3(-0.5f, -0.5f, +0.0f), green },
+	//};
 
-	// Set up indices, which tell us which vertices to use and in which order
-	// - This is redundant for just 3 vertices, but will be more useful later
-	// - Indices are technically not required if the vertices are in the buffer 
-	//    in the correct order and each one will be used exactly once
-	// - But just to see how it's done...
-	unsigned int indices[] = { 0, 1, 2 };
+	//// Set up indices, which tell us which vertices to use and in which order
+	//// - This is redundant for just 3 vertices, but will be more useful later
+	//// - Indices are technically not required if the vertices are in the buffer 
+	////    in the correct order and each one will be used exactly once
+	//// - But just to see how it's done...
+	//unsigned int indices[] = { 0, 1, 2 };
 
 
-	//Create two buffers
-	DX12Helper& dx12Helper = DX12Helper::GetInstance();
-	vertexBuffer = dx12Helper.CreateStaticBuffer(sizeof(Vertex), ARRAYSIZE(vertices), vertices);
-	indexBuffer = dx12Helper.CreateStaticBuffer(sizeof(unsigned int), ARRAYSIZE(indices), indices);
+	////Create two buffers
+	//DX12Helper& dx12Helper = DX12Helper::GetInstance();
+	//vertexBuffer = dx12Helper.CreateStaticBuffer(sizeof(Vertex), ARRAYSIZE(vertices), vertices);
+	//indexBuffer = dx12Helper.CreateStaticBuffer(sizeof(unsigned int), ARRAYSIZE(indices), indices);
 
-	//set up views
-	vbView.StrideInBytes = sizeof(Vertex);
-	vbView.SizeInBytes = sizeof(Vertex) * ARRAYSIZE(vertices);
-	vbView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
+	////set up views
+	//vbView.StrideInBytes = sizeof(Vertex);
+	//vbView.SizeInBytes = sizeof(Vertex) * ARRAYSIZE(vertices);
+	//vbView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
 
-	ibView.Format = DXGI_FORMAT_R32_UINT;
-	ibView.SizeInBytes = sizeof(unsigned int) * ARRAYSIZE(indices);
-	ibView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
+	//ibView.Format = DXGI_FORMAT_R32_UINT;
+	//ibView.SizeInBytes = sizeof(unsigned int) * ARRAYSIZE(indices);
+	//ibView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
+
+
+	// Make the meshes
+	std::shared_ptr<Mesh> sphereMesh = std::make_shared<Mesh>(FixPath(L"../../Assets/Models/sphere.obj").c_str(), device);
+	std::shared_ptr<Mesh> helixMesh = std::make_shared<Mesh>(FixPath(L"../../Assets/Models/helix.obj").c_str(), device);
+	std::shared_ptr<Mesh> cubeMesh = std::make_shared<Mesh>(FixPath(L"../../Assets/Models/cube.obj").c_str(), device);
 }
 
+void Game::CreateEntities() 
+{
+	entities.push_back(std::make_shared<GameEntity>(sphereMesh));
+	entities.push_back(std::make_shared<GameEntity>(helixMesh));
+	entities.push_back(std::make_shared<GameEntity>(cubeMesh));
+	entities.push_back(std::make_shared<GameEntity>(cubeMesh));
+
+	//adjust transform to not be overlapping
+	entities[0]->GetTransform()->SetPosition(-5, 0, 0);
+	entities[1]->GetTransform()->SetPosition(5, 0, 0);
+	entities[2]->GetTransform()->SetPosition(0, 0, -5);
+	entities[3]->GetTransform()->SetPosition(0, 0, 5);
+}
 
 // --------------------------------------------------------
 // Handle resizing to match the new window size.

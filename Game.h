@@ -3,6 +3,10 @@
 #include "DXCore.h"
 #include <DirectXMath.h>
 #include <wrl/client.h> // Used for ComPtr - a smart pointer for COM objects
+#include <memory>
+#include "Camera.h"
+#include "Mesh.h"
+#include "GameEntity.h"
 
 class Game 
 	: public DXCore
@@ -22,9 +26,12 @@ public:
 private:
 
 	// Initialization helper methods - feel free to customize, combine, remove, etc.
-	void CreateGeometry();
+	void LoadMeshes();
 	//dx12 helper, replace LoadShaders effectively
 	void CreateRootSigAndPipelineState();
+
+	//create entities from meshes, textures, shaders etc
+	void CreateEntities();
 
 	// Note the usage of ComPtr below
 	//  - This is a smart pointer for objects that abide by the
@@ -35,10 +42,19 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState;
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> vertexBuffer;
-	Microsoft::WRL::ComPtr<ID3D12Resource> indexBuffer;
+	//Microsoft::WRL::ComPtr<ID3D12Resource> vertexBuffer;
+	//Microsoft::WRL::ComPtr<ID3D12Resource> indexBuffer;
 
-	D3D12_VERTEX_BUFFER_VIEW vbView;
-	D3D12_INDEX_BUFFER_VIEW ibView;
+	//D3D12_VERTEX_BUFFER_VIEW vbView;
+	//D3D12_INDEX_BUFFER_VIEW ibView;
+
+	std::shared_ptr<Camera> camera;
+
+	//hold basic shapes for testing
+	std::shared_ptr<Mesh> sphereMesh;
+	std::shared_ptr<Mesh> helixMesh;
+	std::shared_ptr<Mesh> cubeMesh;
+
+	std::vector<std::shared_ptr<GameEntity>> entities;
 };
 
