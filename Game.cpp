@@ -314,7 +314,8 @@ void Game::Update(float deltaTime, float totalTime)
 		Quit();
 	}
 
-	entities[1]->GetTransform()->Rotate(0, 0, deltaTime / 60);
+	//entities[1]->GetTransform()->Rotate(0, 0, deltaTime / 60);
+	entities[1]->GetTransform()->MoveAbsolute(sin(totalTime), 0, 0);
 
 	camera->Update(deltaTime);
 }
