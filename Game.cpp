@@ -2,6 +2,7 @@
 #include "Vertex.h"
 #include "Input.h"
 #include "Helpers.h"
+#include "BufferStructs.h"
 
 // Needed for a helper function to load pre-compiled shader files
 #pragma comment(lib, "d3dcompiler.lib")
@@ -35,11 +36,11 @@ Game::Game(HINSTANCE hInstance)
 	printf("Console window created successfully.  Feel free to printf() here.\n");
 #endif
 	
-	ibView = {};
-	vbView = {};
+	//ibView = {};
+	//vbView = {};
 
 	camera = make_shared<Camera>(
-		, 0.0f, -15.0f,	// Position
+		0.0f, 0.0f, -15.0f,	// Position
 		5.0f,				// Move speed (world units)
 		0.002f,				// Look speed (cursor movement pixels --> radians for rotation)
 		XM_PIDIV4,			// Field of view
@@ -47,6 +48,8 @@ Game::Game(HINSTANCE hInstance)
 		0.01f,				// Near clip
 		100.0f,				// Far clip
 		CameraProjectionType::Perspective);
+
+	dx12Helper = &DX12Helper::GetInstance();
 }
 
 // --------------------------------------------------------
@@ -75,7 +78,8 @@ void Game::Init()
 	// geometry to draw and some simple camera matrices.
 	//  - You'll be expanding and/or replacing these later
 	CreateRootSigAndPipelineState();
-	CreateGeometry();
+	LoadMeshes();
+	CreateEntities();
 }
 
 // --------------------------------------------------------
@@ -270,9 +274,9 @@ void Game::LoadMeshes()
 
 
 	// Make the meshes
-	std::shared_ptr<Mesh> sphereMesh = std::make_shared<Mesh>(FixPath(L"../../Assets/Models/sphere.obj").c_str(), device);
-	std::shared_ptr<Mesh> helixMesh = std::make_shared<Mesh>(FixPath(L"../../Assets/Models/helix.obj").c_str(), device);
-	std::shared_ptr<Mesh> cubeMesh = std::make_shared<Mesh>(FixPath(L"../../Assets/Models/cube.obj").c_str(), device);
+	sphereMesh = std::make_shared<Mesh>(FixPath(L"../../Assets/Models/sphere.obj").c_str(), device);
+	helixMesh = std::make_shared<Mesh>(FixPath(L"../../Assets/Models/helix.obj").c_str(), device);
+	cubeMesh = std::make_shared<Mesh>(FixPath(L"../../Assets/Models/cube.obj").c_str(), device);
 }
 
 void Game::CreateEntities() 
@@ -306,8 +310,13 @@ void Game::OnResize()
 void Game::Update(float deltaTime, float totalTime)
 {
 	// Example input checking: Quit if the escape key is pressed
-	if (Input::GetInstance().KeyDown(VK_ESCAPE))
+	if (Input::GetInstance().KeyDown(VK_ESCAPE)) {
 		Quit();
+	}
+
+	entities[1]->GetTransform()->Rotate(0, 0, deltaTime / 60);
+
+	camera->Update(deltaTime);
 }
 
 // --------------------------------------------------------
@@ -354,11 +363,35 @@ void Game::Draw(float deltaTime, float totalTime)
 		commandList->OMSetRenderTargets(1, &rtvHandles[currentSwapBuffer], true, &dsvHandle);
 		commandList->RSSetViewports(1, &viewport);
 		commandList->RSSetScissorRects(1, &scissorRect);
-		commandList->IASetVertexBuffers(0, 1, &vbView);
-		commandList->IASetIndexBuffer(&ibView);
+
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap =
+			dx12Helper->GetCBVSRVDescriptorHeap();
+		commandList->SetDescriptorHeaps(1, descriptorHeap.GetAddressOf());
+
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+		//draw each object in entity list
+		for (int i = 0; i < entities.size(); i++) {
+			VertexShaderExternalData eData = {};
+			eData.world = entities[i]->GetTransform()->GetWorldMatrix();
+			eData.view = camera->GetView();
+			eData.proj = camera->GetProjection();
+
+			D3D12_GPU_DESCRIPTOR_HANDLE handle = dx12Helper->FillNextConstantBufferAndGetGPUDescriptorHandle(&eData, sizeof(VertexShaderExternalData));
+			commandList->SetGraphicsRootDescriptorTable(0, handle);
+
+			D3D12_VERTEX_BUFFER_VIEW tempVBView = *entities[i]->GetMesh()->GetVertexBufferView();
+			commandList->IASetVertexBuffers(0, 1, &tempVBView);
+
+			D3D12_INDEX_BUFFER_VIEW tempIBView = *entities[i]->GetMesh()->GetIndexBufferView();
+			commandList->IASetIndexBuffer(&tempIBView);
+			commandList->DrawIndexedInstanced(entities[i]->GetMesh()->GetIndexCount(), 1, 0, 0, 0);
+		}
+
+//		commandList->IASetVertexBuffers(0, 1, &vbView);
+	//	commandList->IASetIndexBuffer(&ibView);
 		// Draw
-		commandList->DrawIndexedInstanced(3, 1, 0, 0, 0);
+		//commandList->DrawIndexedInstanced(3, 1, 0, 0, 0);
 	}
 	
 	// Present
