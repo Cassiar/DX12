@@ -1,4 +1,5 @@
-#pragma once
+#ifndef STRUCTS_HLSLI
+#define STRUCTS_HLSLI
 
 // Struct representing a single vertex worth of data
 // - This should match the vertex definition in our C++ code
@@ -32,3 +33,5 @@ struct VertexToPixel
 	//  v    v                v
 	float4 screenPosition	: SV_POSITION;	// XYZW position (System Value Position)
 };
+
+#endif
