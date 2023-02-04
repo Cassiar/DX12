@@ -325,6 +325,52 @@ void Game::CreateEntities()
 	entities[3]->GetTransform()->SetPosition(0, 0, 5);
 }
 
+// Code borrowed from Chris Cascioli's Adv. DX11 code
+void Game::CreateLights()
+{
+	// Reset
+	lights.clear();
+
+	// Setup directional lights
+	Light dir1 = {};
+	dir1.Type = LIGHT_TYPE_DIRECTIONAL;
+	dir1.Direction = XMFLOAT3(1, -1, 1);
+	dir1.Color = XMFLOAT3(0.8f, 0.8f, 0.8f);
+	dir1.Intensity = 1.0f;
+
+	Light dir2 = {};
+	dir2.Type = LIGHT_TYPE_DIRECTIONAL;
+	dir2.Direction = XMFLOAT3(-1, -0.25f, 0);
+	dir2.Color = XMFLOAT3(0.2f, 0.2f, 0.2f);
+	dir2.Intensity = 1.0f;
+
+	Light dir3 = {};
+	dir3.Type = LIGHT_TYPE_DIRECTIONAL;
+	dir3.Direction = XMFLOAT3(0, -1, 1);
+	dir3.Color = XMFLOAT3(0.2f, 0.2f, 0.2f);
+	dir3.Intensity = 1.0f;
+
+	// Add light to the list
+	lights.push_back(dir1);
+	lights.push_back(dir2);
+	lights.push_back(dir3);
+
+	// Create the rest of the lights
+	while (lights.size() < MAX_LIGHTS)
+	{
+		Light point = {};
+		point.Type = LIGHT_TYPE_POINT;
+		point.Position = XMFLOAT3(RandomRange(-10.0f, 10.0f), RandomRange(-5.0f, 5.0f), RandomRange(-10.0f, 10.0f));
+		point.Color = XMFLOAT3(RandomRange(0, 1), RandomRange(0, 1), RandomRange(0, 1));
+		point.Range = RandomRange(5.0f, 10.0f);
+		point.Intensity = RandomRange(0.1f, 3.0f);
+
+		// Add to the list
+		lights.push_back(point);
+	}
+
+}
+
 // --------------------------------------------------------
 // Handle resizing to match the new window size.
 //  - DXCore needs to resize the back buffer
@@ -432,10 +478,6 @@ void Game::Draw(float deltaTime, float totalTime)
 			commandList->DrawIndexedInstanced(entities[i]->GetMesh()->GetIndexCount(), 1, 0, 0, 0);
 		}
 
-//		commandList->IASetVertexBuffers(0, 1, &vbView);
-	//	commandList->IASetIndexBuffer(&ibView);
-		// Draw
-		//commandList->DrawIndexedInstanced(3, 1, 0, 0, 0);
 	}
 	
 	// Present

@@ -1,4 +1,15 @@
 #include "Structs.hlsli"
+#include "Lighting.hlsli"
+
+// Alignment matters!!!
+cbuffer ExternalData : register(b0)
+{
+	float2 uvScale;
+	float2 uvOffset;
+	float3 cameraPosition;
+	int lightCount;
+	Light lights[MAX_LIGHTS];
+}
 
 //registers for textures
 Texture2D albedoTex : register(t0);

@@ -11,6 +11,7 @@
 #include "GameEntity.h"
 #include "DX12Helper.h"
 #include "Material.h"
+#include "Lights.h"
 
 class Game 
 	: public DXCore
@@ -40,6 +41,9 @@ private:
 	//create entities from meshes, textures, shaders etc
 	void CreateEntities();
 
+	//create lights for our pixel shader
+	void CreateLights();
+
 	// Note the usage of ComPtr below
 	//  - This is a smart pointer for objects that abide by the
 	//     Component Object Model, which DirectX objects do
@@ -66,5 +70,10 @@ private:
 
 	std::vector<std::shared_ptr<Material>> materials;
 	std::vector<std::shared_ptr<GameEntity>> entities;
+
+	// Lights
+	std::vector<Light> lights;
+	int lightCount;
+	bool showPointLights;
 };
 
