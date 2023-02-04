@@ -35,8 +35,9 @@ public:
 	//getters for pipelinestate and gpu handle
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> GetPipelineState();
 	D3D12_GPU_DESCRIPTOR_HANDLE GetFinalGPUHandleForTextures();
+
 private:
-	bool finalized;
+	bool finalized = false;
 
 	// Material properties
 	DirectX::XMFLOAT3 colorTint;
@@ -50,7 +51,7 @@ private:
 
 	//array to hold the four tex types we'll need
 	//albedo normal, metalness, roughness in that order
-	D3D12_CPU_DESCRIPTOR_HANDLE textureSRVsBySlot[numTexSlots];
+	D3D12_CPU_DESCRIPTOR_HANDLE textureSRVsBySlot[4];
 
 	//location of first srv in heap
 	D3D12_GPU_DESCRIPTOR_HANDLE finalGPUHandleForSRVs;

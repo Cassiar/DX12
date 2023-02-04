@@ -273,7 +273,7 @@ void Game::LoadTexturesAndCreateMaterials()
 	XMFLOAT4 red = XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f);
 	XMFLOAT4 green = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);
 	XMFLOAT4 blue = XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
-	XMFLOAT4 white = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	XMFLOAT3 white = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
 	//bronze material
 	materials.push_back(std::make_shared<Material>(pipelineState, white));
@@ -313,10 +313,10 @@ void Game::LoadTexturesAndCreateMaterials()
 
 void Game::CreateEntities() 
 {
-	entities.push_back(std::make_shared<GameEntity>(sphereMesh));
-	entities.push_back(std::make_shared<GameEntity>(helixMesh));
-	entities.push_back(std::make_shared<GameEntity>(cubeMesh));
-	entities.push_back(std::make_shared<GameEntity>(cubeMesh));
+	entities.push_back(std::make_shared<GameEntity>(sphereMesh, materials[0]));
+	entities.push_back(std::make_shared<GameEntity>(helixMesh, materials[1]));
+	entities.push_back(std::make_shared<GameEntity>(cubeMesh, materials[2]));
+	entities.push_back(std::make_shared<GameEntity>(cubeMesh, materials[3]));
 
 	//adjust transform to not be overlapping
 	entities[0]->GetTransform()->SetPosition(-5, 0, 0);
@@ -409,12 +409,14 @@ void Game::Draw(float deltaTime, float totalTime)
 		for (int i = 0; i < entities.size(); i++) {
 			VertexShaderExternalData eData = {};
 			eData.world = entities[i]->GetTransform()->GetWorldMatrix();
+			eData.worldInverseTranspose = entities[i]->GetTransform()->GetWorldInverseTransposeMatrix();
 			eData.view = camera->GetView();
 			eData.proj = camera->GetProjection();
 
 			//grab material and pass to shader
 			std::shared_ptr<Material> mat = entities[i]->GetMaterial();
 			commandList->SetPipelineState(mat->GetPipelineState().Get());
+			
 			// Set the SRV descriptor handle for this material's textures
 			// Note: This assumes that descriptor table 2 is for textures (as per our root sig)
 			commandList->SetGraphicsRootDescriptorTable(2, mat->GetFinalGPUHandleForTextures());
