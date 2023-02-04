@@ -30,6 +30,9 @@ private:
 
 	// Initialization helper methods - feel free to customize, combine, remove, etc.
 	void LoadMeshes();
+
+	void LoadTexturesAndCreateMaterials();
+
 	//dx12 helper, replace LoadShaders effectively
 	void CreateRootSigAndPipelineState();
 
@@ -60,6 +63,7 @@ private:
 	std::shared_ptr<Mesh> helixMesh;
 	std::shared_ptr<Mesh> cubeMesh;
 
+	std::vector<std::shared_ptr<Material>> materials;
 	std::vector<std::shared_ptr<GameEntity>> entities;
 };
 
