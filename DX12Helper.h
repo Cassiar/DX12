@@ -1,6 +1,7 @@
 #pragma once
 #include <d3d12.h>
 #include <wrl/client.h>
+#include <vector>
 class DX12Helper
 {
 #pragma region Singleton

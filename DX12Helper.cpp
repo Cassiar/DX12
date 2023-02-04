@@ -1,5 +1,9 @@
 #include "DX12Helper.h"
 
+#include "WICTextureLoader.h"
+#include "ResourceUploadBatch.h"
+using namespace DirectX;
+
 //declare the singleton
 DX12Helper* DX12Helper::instance;
 
@@ -129,6 +133,63 @@ D3D12_GPU_DESCRIPTOR_HANDLE DX12Helper::FillNextConstantBufferAndGetGPUDescripto
 		// so it can be set as part of the root signature during drawing
 		return gpuHandle;
 	}
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE DX12Helper::LoadTexture(const wchar_t* file, bool generateMips)
+{
+	// Helper function from DXTK for uploading a resource
+	// (like a texture) to the appropriate GPU memory
+	ResourceUploadBatch upload(device.Get());
+	upload.Begin();
+	// Attempt to create the texture
+	Microsoft::WRL::ComPtr<ID3D12Resource> texture;
+	CreateWICTextureFromFile(device.Get(), upload, file, texture.GetAddressOf(), generateMips);
+	// Perform the upload and wait for it to finish before returning the texture
+	auto finish = upload.End(commandQueue.Get());
+	finish.wait();
+	// Now that we have the texture, add to our list and make a CPU-side descriptor heap
+	// just for this texture's SRV. Note that it would probably be better to put all
+	// texture SRVs into the same descriptor heap, but we don't know how many we'll need
+	// until they're all loaded and this is a quick and dirty implementation!
+	textures.push_back(texture);
+	// Create the CPU-SIDE descriptor heap for our descriptor
+	D3D12_DESCRIPTOR_HEAP_DESC dhDesc = {};
+	dhDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE; // Non-shader visible for CPU-side-only desc heap
+	dhDesc.NodeMask = 0;
+	dhDesc.NumDescriptors = 1;
+	dhDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descHeap;
+	device->CreateDescriptorHeap(&dhDesc, IID_PPV_ARGS(descHeap.GetAddressOf()));
+	cpuSideTextureDescriptorHeaps.push_back(descHeap);
+	// Create the SRV on this descriptor heap
+	// Note: Using a null description results in the "default" SRV (same format, all mips, all array slices, etc.)
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = descHeap->GetCPUDescriptorHandleForHeapStart();
+	device->CreateShaderResourceView(texture.Get(), 0, cpuHandle);
+	// Return the CPU descriptor handle, which can be used to
+	// copy the descriptor to a shader-visible heap later
+	return cpuHandle;
+
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE DX12Helper::CopySRVsToDescriptorHeapAndGetGPUDescriptorHandle(D3D12_CPU_DESCRIPTOR_HANDLE firstDescriptorToCopy, unsigned int numDescriptorsToCopy)
+{
+	// Grab the actual heap start on both sides and offset to the next open SRV portion
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle =
+		cbvSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle =
+		cbvSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+	cpuHandle.ptr += (SIZE_T)srvDescriptorOffset * cbvSrvDescriptorHeapIncrementSize;
+	gpuHandle.ptr += (SIZE_T)srvDescriptorOffset * cbvSrvDescriptorHeapIncrementSize;
+	// We know where to copy these descriptors, so copy all of them and remember the new offset
+	device->CopyDescriptorsSimple(
+		numDescriptorsToCopy,
+		cpuHandle,
+		firstDescriptorToCopy,
+		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	srvDescriptorOffset += numDescriptorsToCopy;
+	// Pass back the GPU handle to the start of this section
+	// in the final CBV/SRV heap so the caller can use it later
+	return gpuHandle;
 }
 
 // --------------------------------------------------------
