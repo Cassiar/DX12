@@ -195,12 +195,14 @@ void DX12Helper::CreateCBVSRVDescriptorHeap()
 	D3D12_DESCRIPTOR_HEAP_DESC dhDesc = {};
 	dhDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE; // Shaders can see these!
 	dhDesc.NodeMask = 0; // Node here means physical GPU - we only have 1 so its index is 0
-	dhDesc.NumDescriptors = maxConstantBuffers; // How many descriptors will we need?
+	dhDesc.NumDescriptors = maxConstantBuffers + maxTextureDescriptors; // How many descriptors will we need?
 	dhDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV; // This heap can store CBVs, SRVs and UAVs
 	device->CreateDescriptorHeap(&dhDesc, IID_PPV_ARGS(cbvSrvDescriptorHeap.GetAddressOf()));
 	// Assume the first CBV will be at the beginning of the heap
 	// This will increase as we use more CBVs and will wrap back to 0
 	cbvDescriptorOffset = 0;
+	// Assume the first SRV will be after all possible CBVs
+	srvDescriptorOffset = maxConstantBuffers;
 }
 
 // --------------------------------------------------------
