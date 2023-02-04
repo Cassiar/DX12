@@ -4,6 +4,7 @@
 // Alignment matters!!!
 cbuffer ExternalData : register(b0)
 {
+	float3 colorTint;
 	float2 uvScale;
 	float2 uvOffset;
 	float3 cameraPosition;
@@ -12,12 +13,12 @@ cbuffer ExternalData : register(b0)
 }
 
 //registers for textures
-Texture2D albedoTex : register(t0);
-Texture2D metalTex : register(t1);
-Texture2D normalTex : register(t2);
-Texture2D roughnessTex : register(t3);
+Texture2D AlbedoTex : register(t0);
+Texture2D MetalTex : register(t1);
+Texture2D NormalTex : register(t2);
+Texture2D RoughnessTex : register(t3);
 
-SamplerState basicSampler : register(s0);
+SamplerState BasicSampler : register(s0);
 
 // --------------------------------------------------------
 // The entry point (main method) for our pixel shader
@@ -30,13 +31,52 @@ SamplerState basicSampler : register(s0);
 // --------------------------------------------------------
 float4 main(VertexToPixel input) : SV_TARGET
 {
-	// Just return the input color
-	// - This color (like most values passing through the rasterizer) is 
-	//   interpolated for each pixel between the corresponding vertices 
-	//   of the triangle we're rendering
-	float4 finalColor = 0;
+	// Always re-normalize interpolated direction vectors
+	input.normal = normalize(input.normal);
+	input.tangent = normalize(input.tangent);
 
-	finalColor += albedoTex.Sample(basicSampler, input.uv);
+	// Apply the uv adjustments
+	input.uv = input.uv * uvScale + uvOffset;
 
-	return finalColor;
+	// Sample various textures
+	input.normal = NormalMapping(NormalTex, BasicSampler, input.uv, input.normal, input.tangent);
+	float roughness = RoughnessTex.Sample(BasicSampler, input.uv).r;
+	float metal = MetalTex.Sample(BasicSampler, input.uv).r;
+
+	// Gamma correct the texture back to linear space and apply the color tint
+	float4 surfaceColor = AlbedoTex.Sample(BasicSampler, input.uv);
+	surfaceColor.rgb = pow(surfaceColor.rgb, 2.2) * colorTint;
+
+	// Specular color - Assuming albedo texture is actually holding specular color if metal == 1
+	// Note the use of lerp here - metal is generally 0 or 1, but might be in between
+	// because of linear texture sampling, so we want lerp the specular color to match
+	float3 specColor = lerp(F0_NON_METAL.rrr, surfaceColor.rgb, metal);
+
+	// Total color for this pixel
+	float3 totalColor = float3(0,0,0);
+
+	// Loop through all lights this frame
+	for (int i = 0; i < lightCount; i++)
+	{
+		// Which kind of light?
+		switch (lights[i].Type)
+		{
+		case LIGHT_TYPE_DIRECTIONAL:
+			totalColor += DirLightPBR(lights[i], input.normal, input.worldPos, cameraPosition, roughness, metal, surfaceColor.rgb, specColor);
+			break;
+
+		//case LIGHT_TYPE_POINT:
+		//	totalColor += PointLightPBR(lights[i], input.normal, input.worldPos, cameraPosition, roughness, metal, surfaceColor.rgb, specColor);
+		//	break;
+
+		//case LIGHT_TYPE_SPOT:
+		//	totalColor += SpotLightPBR(lights[i], input.normal, input.worldPos, cameraPosition, roughness, metal, surfaceColor.rgb, specColor);
+		//	break;
+		}
+	}
+
+	totalColor = surfaceColor.rgb;
+
+	// Gamma correction
+	return float4(pow(totalColor, 1.0f / 2.2f), 1);	
 }

@@ -13,6 +13,10 @@
 using namespace DirectX;
 using namespace std;
 
+// Helper macro for getting a float between min and max
+//from Chris's code
+#define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
+
 // --------------------------------------------------------
 // Constructor
 //
@@ -81,6 +85,7 @@ void Game::Init()
 	LoadMeshes();
 	LoadTexturesAndCreateMaterials();
 	CreateEntities();
+	CreateLights();
 }
 
 // --------------------------------------------------------
@@ -334,8 +339,8 @@ void Game::CreateLights()
 	// Setup directional lights
 	Light dir1 = {};
 	dir1.Type = LIGHT_TYPE_DIRECTIONAL;
-	dir1.Direction = XMFLOAT3(1, -1, 1);
-	dir1.Color = XMFLOAT3(0.8f, 0.8f, 0.8f);
+	dir1.Direction = XMFLOAT3(-1, 0, 0);
+	dir1.Color = XMFLOAT3(1.0f, 1.0f, 1.0f);
 	dir1.Intensity = 1.0f;
 
 	Light dir2 = {};
@@ -356,19 +361,18 @@ void Game::CreateLights()
 	lights.push_back(dir3);
 
 	// Create the rest of the lights
-	while (lights.size() < MAX_LIGHTS)
-	{
-		Light point = {};
-		point.Type = LIGHT_TYPE_POINT;
-		point.Position = XMFLOAT3(RandomRange(-10.0f, 10.0f), RandomRange(-5.0f, 5.0f), RandomRange(-10.0f, 10.0f));
-		point.Color = XMFLOAT3(RandomRange(0, 1), RandomRange(0, 1), RandomRange(0, 1));
-		point.Range = RandomRange(5.0f, 10.0f);
-		point.Intensity = RandomRange(0.1f, 3.0f);
+	//while (lights.size() < 17) //only have 20 lights total
+	//{
+	//	Light point = {};
+	//	point.Type = LIGHT_TYPE_POINT;
+	//	point.Position = XMFLOAT3(RandomRange(-10.0f, 10.0f), RandomRange(-5.0f, 5.0f), RandomRange(-10.0f, 10.0f));
+	//	point.Color = XMFLOAT3(RandomRange(0, 1), RandomRange(0, 1), RandomRange(0, 1));
+	//	point.Range = RandomRange(5.0f, 10.0f);
+	//	point.Intensity = RandomRange(0.1f, 3.0f);
 
-		// Add to the list
-		lights.push_back(point);
-	}
-
+	//	// Add to the list
+	//	lights.push_back(point);
+	//}
 }
 
 // --------------------------------------------------------
@@ -453,22 +457,46 @@ void Game::Draw(float deltaTime, float totalTime)
 
 		//draw each object in entity list
 		for (int i = 0; i < entities.size(); i++) {
-			VertexShaderExternalData eData = {};
-			eData.world = entities[i]->GetTransform()->GetWorldMatrix();
-			eData.worldInverseTranspose = entities[i]->GetTransform()->GetWorldInverseTransposeMatrix();
-			eData.view = camera->GetView();
-			eData.proj = camera->GetProjection();
 
 			//grab material and pass to shader
 			std::shared_ptr<Material> mat = entities[i]->GetMaterial();
 			commandList->SetPipelineState(mat->GetPipelineState().Get());
-			
+
 			// Set the SRV descriptor handle for this material's textures
 			// Note: This assumes that descriptor table 2 is for textures (as per our root sig)
 			commandList->SetGraphicsRootDescriptorTable(2, mat->GetFinalGPUHandleForTextures());
 
-			D3D12_GPU_DESCRIPTOR_HANDLE handle = dx12Helper->FillNextConstantBufferAndGetGPUDescriptorHandle(&eData, sizeof(VertexShaderExternalData));
-			commandList->SetGraphicsRootDescriptorTable(0, handle);
+			{
+				VertexShaderExternalData vsData = {};
+				vsData.world = entities[i]->GetTransform()->GetWorldMatrix();
+				vsData.worldInverseTranspose = entities[i]->GetTransform()->GetWorldInverseTransposeMatrix();
+				vsData.view = camera->GetView();
+				vsData.proj = camera->GetProjection();
+
+				D3D12_GPU_DESCRIPTOR_HANDLE cbHandleVS = dx12Helper->FillNextConstantBufferAndGetGPUDescriptorHandle(&vsData, sizeof(VertexShaderExternalData));
+				commandList->SetGraphicsRootDescriptorTable(0, cbHandleVS);
+			}
+
+			// Pixel shader data and cbuffer setup
+			{
+				PixelShaderExternalData psData = {};
+				psData.colorTint = mat->GetColorTint();
+				psData.uvScale = mat->GetUVScale();
+				psData.uvOffset = mat->GetUVOffset();
+				psData.cameraPosition = camera->GetTransform()->GetPosition();
+				psData.lightCount = (int)min(lights.size(), MAX_LIGHTS);
+				memcpy(psData.lights, &lights[0], sizeof(Light) * MAX_LIGHTS);
+				// Send this to a chunk of the constant buffer heap
+				// and grab the GPU handle for it so we can set it for this draw
+				D3D12_GPU_DESCRIPTOR_HANDLE cbHandlePS =
+					dx12Helper->FillNextConstantBufferAndGetGPUDescriptorHandle(
+						(void*)(&psData), sizeof(PixelShaderExternalData));
+				// Set this constant buffer handle
+				// Note: This assumes that descriptor table 1 is the
+				// place to put this particular descriptor. This
+				// is based on how we set up our root signature.
+				commandList->SetGraphicsRootDescriptorTable(1, cbHandlePS);
+			}
 
 			D3D12_VERTEX_BUFFER_VIEW tempVBView = *entities[i]->GetMesh()->GetVertexBufferView();
 			commandList->IASetVertexBuffers(0, 1, &tempVBView);
