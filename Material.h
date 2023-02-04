@@ -32,6 +32,9 @@ public:
 	//done adding textures
 	void FinalizeMaterial();
 
+	//getters for pipelinestate and gpu handle
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> GetPipelineState();
+	D3D12_GPU_DESCRIPTOR_HANDLE GetFinalGPUHandleForTextures();
 private:
 	bool finalized;
 

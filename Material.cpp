@@ -38,6 +38,17 @@ void Material::SetColorTint(DirectX::XMFLOAT3 tint)
     colorTint = tint;
 }
 
+
+Microsoft::WRL:ComPtr<ID3D12PipelineState> Material::GetPipelineState() 
+{
+    return pipelineState;
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE Material::GetFinalGPUHandleForTextures()
+{
+    return finalGPUHandleForSRVs;
+}
+
 void Material::AddTexture(D3D12_CPU_DESCRIPTOR_HANDLE srv, int slot)
 {
     //exit early if slot doesn't fit into array

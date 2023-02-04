@@ -3,11 +3,11 @@
 #include "Input.h"
 #include "Helpers.h"
 #include "BufferStructs.h"
+#include "DX12Helper.h"
 
 // Needed for a helper function to load pre-compiled shader files
 #pragma comment(lib, "d3dcompiler.lib")
 #include <d3dcompiler.h>
-#include "DX12Helper.h"
 
 // For the DirectX Math library
 using namespace DirectX;
@@ -266,7 +266,7 @@ void Game::LoadMeshes()
 	cubeMesh = std::make_shared<Mesh>(FixPath(L"../../Assets/Models/cube.obj").c_str(), device);
 }
 
-void LoadTexturesAndCreateMaterials()
+void Game::LoadTexturesAndCreateMaterials()
 {
 	// Create some temporary variables to represent colors
 	// - Not necessary, just makes things more readable
@@ -275,8 +275,40 @@ void LoadTexturesAndCreateMaterials()
 	XMFLOAT4 blue = XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
 	XMFLOAT4 white = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 
-	
+	//bronze material
 	materials.push_back(std::make_shared<Material>(pipelineState, white));
+	//cobblestone
+	materials.push_back(std::make_shared<Material>(pipelineState, white));
+	//paint
+	materials.push_back(std::make_shared<Material>(pipelineState, white));
+	//scratched
+	materials.push_back(std::make_shared<Material>(pipelineState, white));
+
+	//add appropriate textures to each material
+	materials[0]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/bronze_albedo.png").c_str()), 0);
+	materials[0]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/bronze_metal.png").c_str()), 1);
+	materials[0]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/bronze_normals.png").c_str()), 2);
+	materials[0]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/bronze_roughness.png").c_str()), 3);
+
+	materials[1]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_albedo.png").c_str()), 0);
+	materials[1]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_metal.png").c_str()), 1);
+	materials[1]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_normals.png").c_str()), 2);
+	materials[1]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_roughness.png").c_str()), 3);
+
+	materials[2]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/paint_albedo.png").c_str()), 0);
+	materials[2]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/paint_metal.png").c_str()), 1);
+	materials[2]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/paint_normals.png").c_str()), 2);
+	materials[2]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/paint_roughness.png").c_str()), 3);
+
+	materials[3]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_albedo.png").c_str()), 0);
+	materials[3]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_metal.png").c_str()), 1);
+	materials[3]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_normals.png").c_str()), 2);
+	materials[3]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_roughness.png").c_str()), 3);
+
+	//
+	for (int i = 0; i < materials.size(); i++) {
+		materials[i]->FinalizeMaterial();
+	}
 }
 
 void Game::CreateEntities() 
@@ -379,6 +411,13 @@ void Game::Draw(float deltaTime, float totalTime)
 			eData.world = entities[i]->GetTransform()->GetWorldMatrix();
 			eData.view = camera->GetView();
 			eData.proj = camera->GetProjection();
+
+			//grab material and pass to shader
+			std::shared_ptr<Material> mat = entities[i]->GetMaterial();
+			commandList->SetPipelineState(mat->GetPipelineState().Get());
+			// Set the SRV descriptor handle for this material's textures
+			// Note: This assumes that descriptor table 2 is for textures (as per our root sig)
+			commandList->SetGraphicsRootDescriptorTable(2, mat->GetFinalGPUHandleForTextures());
 
 			D3D12_GPU_DESCRIPTOR_HANDLE handle = dx12Helper->FillNextConstantBufferAndGetGPUDescriptorHandle(&eData, sizeof(VertexShaderExternalData));
 			commandList->SetGraphicsRootDescriptorTable(0, handle);

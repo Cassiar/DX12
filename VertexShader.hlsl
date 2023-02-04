@@ -1,6 +1,7 @@
 #include "Structs.hlsli"
 cbuffer ExternalData : register(b0) {
 	matrix world;
+	matrix worldInverseTranspose;
 	matrix view;
 	matrix proj;
 }
@@ -30,6 +31,16 @@ VertexToPixel main( VertexShaderInput input )
 	matrix wvp = mul(mul(proj, view), world);
 	output.screenPosition = mul(wvp, float4(input.localPosition, 1.0f));
 
+	// Calculate the world position of this vertex (to be used
+	// in the pixel shader when we do point/spot lights)
+	output.worldPos = mul(world, float4(input.localPosition, 1.0f)).xyz;
+
+	// Make sure the other vectors are in WORLD space, not "local" space
+	output.normal = normalize(mul((float3x3)worldInverseTranspose, input.normal));
+	output.tangent = normalize(mul((float3x3)world, input.tangent)); // Tangent doesn't need inverse transpose!
+
+	// Pass the UV through
+	output.uv = input.uv;
 	// Whatever we return will make its way through the pipeline to the
 	// next programmable stage we're using (the pixel shader for now)
 	return output;
