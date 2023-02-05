@@ -4,10 +4,11 @@
 // Alignment matters!!!
 cbuffer ExternalData : register(b0)
 {
-	float3 colorTint;
 	float2 uvScale;
 	float2 uvOffset;
 	float3 cameraPosition;
+	float padding;
+	float3 colorTint;
 	int lightCount;
 	Light lights[MAX_LIGHTS];
 }
@@ -46,6 +47,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	// Gamma correct the texture back to linear space and apply the color tint
 	float4 surfaceColor = AlbedoTex.Sample(BasicSampler, input.uv);
 	surfaceColor.rgb = pow(surfaceColor.rgb, 2.2) * colorTint;
+	//return float4(colorTint, 1.0f);
 
 	// Specular color - Assuming albedo texture is actually holding specular color if metal == 1
 	// Note the use of lerp here - metal is generally 0 or 1, but might be in between
@@ -65,17 +67,18 @@ float4 main(VertexToPixel input) : SV_TARGET
 			totalColor += DirLightPBR(lights[i], input.normal, input.worldPos, cameraPosition, roughness, metal, surfaceColor.rgb, specColor);
 			break;
 
-		//case LIGHT_TYPE_POINT:
-		//	totalColor += PointLightPBR(lights[i], input.normal, input.worldPos, cameraPosition, roughness, metal, surfaceColor.rgb, specColor);
-		//	break;
+		case LIGHT_TYPE_POINT:
+			totalColor += PointLightPBR(lights[i], input.normal, input.worldPos, cameraPosition, roughness, metal, surfaceColor.rgb, specColor);
+			break;
 
-		//case LIGHT_TYPE_SPOT:
-		//	totalColor += SpotLightPBR(lights[i], input.normal, input.worldPos, cameraPosition, roughness, metal, surfaceColor.rgb, specColor);
-		//	break;
+		case LIGHT_TYPE_SPOT:
+			totalColor += SpotLightPBR(lights[i], input.normal, input.worldPos, cameraPosition, roughness, metal, surfaceColor.rgb, specColor);
+			break;
 		}
 	}
 
-	totalColor = surfaceColor.rgb;
+	//totalColor = surfaceColor.rgb;
+	//return float4(lights[0].Color.b,0,0, 1.0f);
 
 	// Gamma correction
 	return float4(pow(totalColor, 1.0f / 2.2f), 1);	

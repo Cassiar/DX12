@@ -13,10 +13,11 @@ struct VertexShaderExternalData {
 // Alignment matters!!!
 // must match alignment in pixel shader
 struct PixelShaderExternalData {
-	DirectX::XMFLOAT3 colorTint;
 	DirectX::XMFLOAT2 uvScale;
 	DirectX::XMFLOAT2 uvOffset;
 	DirectX::XMFLOAT3 cameraPosition;
+	float padding;
+	DirectX::XMFLOAT3 colorTint;
 	int lightCount;
 	Light lights[MAX_LIGHTS];
 };

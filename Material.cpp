@@ -3,7 +3,7 @@
 Material::Material(Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState, DirectX::XMFLOAT3 tint, DirectX::XMFLOAT2 uvScale, DirectX::XMFLOAT2 uvOffset)
 {
     this->pipelineState = pipelineState;
-    this->colorTint = tint;
+    colorTint = tint;
     this->uvScale = uvScale;
     this->uvOffset = uvOffset;
 }

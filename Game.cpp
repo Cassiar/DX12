@@ -281,13 +281,13 @@ void Game::LoadTexturesAndCreateMaterials()
 	XMFLOAT3 white = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
 	//bronze material
-	materials.push_back(std::make_shared<Material>(pipelineState, white));
+	materials.push_back(std::make_shared<Material>(pipelineState));
 	//cobblestone
-	materials.push_back(std::make_shared<Material>(pipelineState, white));
+	materials.push_back(std::make_shared<Material>(pipelineState));
 	//paint
-	materials.push_back(std::make_shared<Material>(pipelineState, white));
+	materials.push_back(std::make_shared<Material>(pipelineState));
 	//scratched
-	materials.push_back(std::make_shared<Material>(pipelineState, white));
+	materials.push_back(std::make_shared<Material>(pipelineState));
 
 	//add appropriate textures to each material
 	materials[0]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/bronze_albedo.png").c_str()), 0);
@@ -313,6 +313,7 @@ void Game::LoadTexturesAndCreateMaterials()
 	//
 	for (int i = 0; i < materials.size(); i++) {
 		materials[i]->FinalizeMaterial();
+		printf("R: %f G: %f B: %f\n", materials[i]->GetColorTint().x, materials[i]->GetColorTint().y, materials[i]->GetColorTint().z);
 	}
 }
 
@@ -396,10 +397,10 @@ void Game::Update(float deltaTime, float totalTime)
 		Quit();
 	}
 
-	entities[0]->GetTransform()->MoveRelative(0, (float)cos(totalTime) / 4, 0);
+	//entities[0]->GetTransform()->MoveRelative(0, (float)cos(totalTime) / 4, 0);
 	entities[1]->GetTransform()->Rotate(0, deltaTime, 0);
 	entities[2]->GetTransform()->Rotate(0, 0, deltaTime);
-	entities[3]->GetTransform()->MoveRelative((float)sin(totalTime) / 4, 0, 0);
+	//entities[3]->GetTransform()->MoveRelative((float)sin(totalTime) / 4, 0, 0);
 
 	camera->Update(deltaTime);
 }
@@ -480,11 +481,11 @@ void Game::Draw(float deltaTime, float totalTime)
 			// Pixel shader data and cbuffer setup
 			{
 				PixelShaderExternalData psData = {};
-				psData.colorTint = mat->GetColorTint();
 				psData.uvScale = mat->GetUVScale();
 				psData.uvOffset = mat->GetUVOffset();
 				psData.cameraPosition = camera->GetTransform()->GetPosition();
-				psData.lightCount = (int)min(lights.size(), MAX_LIGHTS);
+				psData.colorTint = mat->GetColorTint();
+				psData.lightCount = lights.size();
 				memcpy(psData.lights, &lights[0], sizeof(Light) * MAX_LIGHTS);
 				// Send this to a chunk of the constant buffer heap
 				// and grab the GPU handle for it so we can set it for this draw
