@@ -313,7 +313,6 @@ void Game::LoadTexturesAndCreateMaterials()
 	//
 	for (int i = 0; i < materials.size(); i++) {
 		materials[i]->FinalizeMaterial();
-		printf("R: %f G: %f B: %f\n", materials[i]->GetColorTint().x, materials[i]->GetColorTint().y, materials[i]->GetColorTint().z);
 	}
 }
 
@@ -362,18 +361,18 @@ void Game::CreateLights()
 	lights.push_back(dir3);
 
 	// Create the rest of the lights
-	//while (lights.size() < 17) //only have 20 lights total
-	//{
-	//	Light point = {};
-	//	point.Type = LIGHT_TYPE_POINT;
-	//	point.Position = XMFLOAT3(RandomRange(-10.0f, 10.0f), RandomRange(-5.0f, 5.0f), RandomRange(-10.0f, 10.0f));
-	//	point.Color = XMFLOAT3(RandomRange(0, 1), RandomRange(0, 1), RandomRange(0, 1));
-	//	point.Range = RandomRange(5.0f, 10.0f);
-	//	point.Intensity = RandomRange(0.1f, 3.0f);
+	while (lights.size() < 17) //only have 20 lights total
+	{
+		Light point = {};
+		point.Type = LIGHT_TYPE_POINT;
+		point.Position = XMFLOAT3(RandomRange(-10.0f, 10.0f), RandomRange(-5.0f, 5.0f), RandomRange(-10.0f, 10.0f));
+		point.Color = XMFLOAT3(RandomRange(0, 1), RandomRange(0, 1), RandomRange(0, 1));
+		point.Range = RandomRange(5.0f, 10.0f);
+		point.Intensity = RandomRange(0.1f, 3.0f);
 
-	//	// Add to the list
-	//	lights.push_back(point);
-	//}
+		// Add to the list
+		lights.push_back(point);
+	}
 }
 
 // --------------------------------------------------------
@@ -398,8 +397,10 @@ void Game::Update(float deltaTime, float totalTime)
 	}
 
 	//entities[0]->GetTransform()->MoveRelative(0, (float)cos(totalTime) / 4, 0);
+	entities[0]->GetTransform()->Rotate(deltaTime, deltaTime, 0);
 	entities[1]->GetTransform()->Rotate(0, deltaTime, 0);
 	entities[2]->GetTransform()->Rotate(0, 0, deltaTime);
+	entities[3]->GetTransform()->Rotate(deltaTime, 0, 0);
 	//entities[3]->GetTransform()->MoveRelative((float)sin(totalTime) / 4, 0, 0);
 
 	camera->Update(deltaTime);
@@ -423,8 +424,8 @@ void Game::Draw(float deltaTime, float totalTime)
 		rb.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		rb.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		commandList->ResourceBarrier(1, &rb);
-		// Background color (Cornflower Blue in this case) for clearing
-		float color[] = { 0.4f, 0.6f, 0.75f, 1.0f };
+		// Background color (black in this case) for clearing
+		float color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 		// Clear the RTV
 		commandList->ClearRenderTargetView(
 			rtvHandles[currentSwapBuffer],
