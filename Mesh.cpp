@@ -3,6 +3,7 @@
 #include <DirectXMath.h>
 #include <vector>
 #include <fstream>
+#include "RaytracingHelper.h"
 
 using namespace DirectX;
 
@@ -208,18 +209,19 @@ Mesh::~Mesh() { }
 Microsoft::WRL::ComPtr<ID3D12Resource> Mesh::GetVertexBuffer() { return vb; }
 Microsoft::WRL::ComPtr<ID3D12Resource> Mesh::GetIndexBuffer() { return ib; }
 
-D3D12_VERTEX_BUFFER_VIEW* Mesh::GetVertexBufferView()
+D3D12_VERTEX_BUFFER_VIEW Mesh::GetVBView()
 {
-	return &vbView;
+	return vbView;
 }
 
-D3D12_INDEX_BUFFER_VIEW* Mesh::GetIndexBufferView()
+D3D12_INDEX_BUFFER_VIEW Mesh::GetIBView()
 {
-	return &ibView;
+	return ibView;
 }
 
 unsigned int Mesh::GetIndexCount() { return numIndices; }
 
+unsigned int Mesh::GetVertexCount() { return numVerts; }
 
 // --------------------------------------------------------
 // Helper for creating the actual D3D buffers.
@@ -277,6 +279,11 @@ void Mesh::CreateBuffers(Vertex* vertArray, size_t numVerts, unsigned int* index
 
 	// Save the indices
 	this->numIndices = (unsigned int)numIndices;
+	this->numVerts = (unsigned int)numVerts;
+
+	//create raytracing acceleration structure for this mesh
+	raytracingData = 
+		RaytracingHelper::GetInstance().CreateBottomLevelAccelerationStructureForMesh(this);
 }
 
 // --------------------------------------------------------

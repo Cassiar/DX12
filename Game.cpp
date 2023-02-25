@@ -4,6 +4,7 @@
 #include "Helpers.h"
 #include "BufferStructs.h"
 #include "DX12Helper.h"
+#include "RaytracingHelper.h"
 
 // Needed for a helper function to load pre-compiled shader files
 #pragma comment(lib, "d3dcompiler.lib")
@@ -78,6 +79,16 @@ Game::~Game()
 // --------------------------------------------------------
 void Game::Init()
 {
+
+	//init DXR
+	RaytracingHelper::GetInstance().Initialize(
+		windowWidth,
+		windowHeight,
+		device,
+		commandQueue,
+		commandList,
+		FixPath(L"Raytracing.cso"));
+
 	// Helper methods for loading shaders, creating some basic
 	// geometry to draw and some simple camera matrices.
 	//  - You'll be expanding and/or replacing these later
@@ -328,6 +339,8 @@ void Game::CreateEntities()
 	entities[1]->GetTransform()->SetPosition(5, 0, 0);
 	entities[2]->GetTransform()->SetPosition(0, 0, -5);
 	entities[3]->GetTransform()->SetPosition(0, 0, 5);
+
+	RaytracingHelper::GetInstance().CreateTopLevelAccelerationStructureForScene(entities);
 }
 
 // Code borrowed from Chris Cascioli's Adv. DX11 code
@@ -500,10 +513,10 @@ void Game::Draw(float deltaTime, float totalTime)
 				commandList->SetGraphicsRootDescriptorTable(1, cbHandlePS);
 			}
 
-			D3D12_VERTEX_BUFFER_VIEW tempVBView = *entities[i]->GetMesh()->GetVertexBufferView();
+			D3D12_VERTEX_BUFFER_VIEW tempVBView = entities[i]->GetMesh()->GetVBView();
 			commandList->IASetVertexBuffers(0, 1, &tempVBView);
 
-			D3D12_INDEX_BUFFER_VIEW tempIBView = *entities[i]->GetMesh()->GetIndexBufferView();
+			D3D12_INDEX_BUFFER_VIEW tempIBView = entities[i]->GetMesh()->GetIBView();
 			commandList->IASetIndexBuffer(&tempIBView);
 			commandList->DrawIndexedInstanced(entities[i]->GetMesh()->GetIndexCount(), 1, 0, 0, 0);
 		}
