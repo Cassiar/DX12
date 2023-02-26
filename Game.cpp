@@ -300,6 +300,12 @@ void Game::LoadTexturesAndCreateMaterials()
 	//scratched
 	materials.push_back(std::make_shared<Material>(pipelineState));
 
+	//make a bunch of materials with random colors
+	//for (int i = 0; i < 5; i++) {
+	//	XMFLOAT3 randColor = XMFLOAT3(RandomRange(0, 0.99), RandomRange(0, 0.99), RandomRange(0, 0.99));
+	//	materials.push_back(std::make_shared<Material>(pipelineState, randColor));
+	//}
+
 	//add appropriate textures to each material
 	materials[0]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/bronze_albedo.png").c_str()), 0);
 	materials[0]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/bronze_metal.png").c_str()), 1);
@@ -333,12 +339,27 @@ void Game::CreateEntities()
 	entities.push_back(std::make_shared<GameEntity>(helixMesh, materials[1]));
 	entities.push_back(std::make_shared<GameEntity>(cubeMesh, materials[2]));
 	entities.push_back(std::make_shared<GameEntity>(cubeMesh, materials[3]));
+	entities.push_back(std::make_shared<GameEntity>(cubeMesh, materials[0]));
+
+	//add a bunch of random sphere
+	//for (int i = 0; i < 20; i++) {
+	//	int index = RandomRange(0, 24);
+	//	entities.push_back(std::make_shared<GameEntity>(sphereMesh, materials[index]));
+	//}
 
 	//adjust transform to not be overlapping
 	entities[0]->GetTransform()->SetPosition(-5, 0, 0);
 	entities[1]->GetTransform()->SetPosition(5, 0, 0);
 	entities[2]->GetTransform()->SetPosition(0, 0, -5);
 	entities[3]->GetTransform()->SetPosition(0, 0, 5);
+	//make a big square to be the ground
+	entities[4]->GetTransform()->SetPosition(0, -24, 0);
+	entities[4]->GetTransform()->SetScale(25, 25, 25);
+
+	//move the spheres to random positions
+	//for (int i = 5; i < entities.size(); i++) {
+	//	entities[i]->GetTransform()->SetPosition(RandomRange(-5, 5), RandomRange(-5, 5), RandomRange(-5, 5));
+	//}
 
 	RaytracingHelper::GetInstance().CreateTopLevelAccelerationStructureForScene(entities);
 }
