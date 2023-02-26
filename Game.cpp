@@ -427,7 +427,7 @@ void Game::Update(float deltaTime, float totalTime)
 void Game::Draw(float deltaTime, float totalTime)
 {
 	// Grab the current back buffer for this frame
-	Microsoft::WRL::ComPtr<ID3D12Resource> currentBackBuffer = backBuffers[currentSwapBuffer];
+	//Microsoft::WRL::ComPtr<ID3D12Resource> currentBackBuffer = backBuffers[currentSwapBuffer];
 	
 	RaytracingHelper::GetInstance().CreateTopLevelAccelerationStructureForScene(entities);
 
@@ -551,7 +551,11 @@ void Game::Draw(float deltaTime, float totalTime)
 		//commandList->ResourceBarrier(1, &rb);
 		
 		// Must occur BEFORE present
-		DX12Helper::GetInstance().CloseExecuteAndResetCommandList();
+		//DX12Helper::GetInstance().CloseExecuteAndResetCommandList();
+		DX12Helper::GetInstance().WaitForGPU();
+		commandAllocator->Reset();
+		commandList->Reset(commandAllocator.Get(), 0);
+		
 		// Present the current back buffer
 		bool vsyncNecessary = vsync || !deviceSupportsTearing || isFullscreen;
 		swapChain->Present(
