@@ -71,6 +71,11 @@ Game::~Game()
 	// Call Release() on any Direct3D objects made within this class
 	// - Note: this is unnecessary for D3D objects stored in ComPtrs
 	DX12Helper::GetInstance().WaitForGPU();
+
+	//RaytracingHelper::GetINstance().
+
+	//delete dx12Helper;
+	delete& RaytracingHelper::GetInstance();
 }
 
 // --------------------------------------------------------
