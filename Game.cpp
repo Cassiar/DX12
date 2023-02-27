@@ -18,6 +18,8 @@ using namespace std;
 //from Chris's code
 #define RandomRange(min, max) (float)rand() / RAND_MAX * (max - min) + min
 
+#define NUM_SPHERES 20
+
 // --------------------------------------------------------
 // Constructor
 //
@@ -306,34 +308,41 @@ void Game::LoadTexturesAndCreateMaterials()
 	materials.push_back(std::make_shared<Material>(pipelineState));
 
 	//make a bunch of materials with random colors
-	//for (int i = 0; i < 5; i++) {
-	//	XMFLOAT3 randColor = XMFLOAT3(RandomRange(0, 0.99), RandomRange(0, 0.99), RandomRange(0, 0.99));
-	//	materials.push_back(std::make_shared<Material>(pipelineState, randColor));
-	//}
+	for (int i = 0; i < NUM_SPHERES; i++) {
+		XMFLOAT3 randColor = XMFLOAT3(RandomRange(0, 0.99f), RandomRange(0, 0.99f), RandomRange(0, 0.99f));
+		materials.push_back(std::make_shared<Material>(pipelineState, randColor));
+	}
 
 	//add appropriate textures to each material
-	materials[0]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/bronze_albedo.png").c_str()), 0);
-	materials[0]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/bronze_metal.png").c_str()), 1);
-	materials[0]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/bronze_normals.png").c_str()), 2);
-	materials[0]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/bronze_roughness.png").c_str()), 3);
-
-	materials[1]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_albedo.png").c_str()), 0);
-	materials[1]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_metal.png").c_str()), 1);
-	materials[1]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_normals.png").c_str()), 2);
-	materials[1]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_roughness.png").c_str()), 3);
-
-	materials[2]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/paint_albedo.png").c_str()), 0);
-	materials[2]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/paint_metal.png").c_str()), 1);
-	materials[2]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/paint_normals.png").c_str()), 2);
-	materials[2]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/paint_roughness.png").c_str()), 3);
-
-	materials[3]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_albedo.png").c_str()), 0);
-	materials[3]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_metal.png").c_str()), 1);
-	materials[3]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_normals.png").c_str()), 2);
-	materials[3]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_roughness.png").c_str()), 3);
+	//materials[0]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/bronze_albedo.png").c_str()), 0);
+	//materials[0]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/bronze_metal.png").c_str()), 1);
+	//materials[0]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/bronze_normals.png").c_str()), 2);
+	//materials[0]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/bronze_roughness.png").c_str()), 3);
+	//
+	//materials[1]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_albedo.png").c_str()), 0);
+	//materials[1]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_metal.png").c_str()), 1);
+	//materials[1]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_normals.png").c_str()), 2);
+	//materials[1]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/cobblestone_roughness.png").c_str()), 3);
+	//
+	//materials[2]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/paint_albedo.png").c_str()), 0);
+	//materials[2]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/paint_metal.png").c_str()), 1);
+	//materials[2]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/paint_normals.png").c_str()), 2);
+	//materials[2]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/paint_roughness.png").c_str()), 3);
+	//
+	//materials[3]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_albedo.png").c_str()), 0);
+	//materials[3]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_metal.png").c_str()), 1);
+	//materials[3]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_normals.png").c_str()), 2);
+	//materials[3]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_roughness.png").c_str()), 3);
 
 	//
 	for (int i = 0; i < materials.size(); i++) {
+
+		//'fake' textures to prevent seg faults
+		materials[i]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_albedo.png").c_str()), 0);
+		materials[i]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_metal.png").c_str()), 1);
+		materials[i]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_normals.png").c_str()), 2);
+		materials[i]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_roughness.png").c_str()), 3);
+
 		materials[i]->FinalizeMaterial();
 	}
 }
@@ -347,10 +356,11 @@ void Game::CreateEntities()
 	entities.push_back(std::make_shared<GameEntity>(cubeMesh, materials[0]));
 
 	//add a bunch of random sphere
-	//for (int i = 0; i < 20; i++) {
-	//	int index = RandomRange(0, 24);
-	//	entities.push_back(std::make_shared<GameEntity>(sphereMesh, materials[index]));
-	//}
+	for (int i = 0; i < NUM_SPHERES; i++) {
+		//4 basic colors for red, green, blue, and white
+		int index = RandomRange(0, NUM_SPHERES + 4);
+		entities.push_back(std::make_shared<GameEntity>(sphereMesh, materials[index]));
+	}
 
 	//adjust transform to not be overlapping
 	entities[0]->GetTransform()->SetPosition(-5, 0, 0);
@@ -362,9 +372,10 @@ void Game::CreateEntities()
 	entities[4]->GetTransform()->SetScale(25, 25, 25);
 
 	//move the spheres to random positions
-	//for (int i = 5; i < entities.size(); i++) {
-	//	entities[i]->GetTransform()->SetPosition(RandomRange(-5, 5), RandomRange(-5, 5), RandomRange(-5, 5));
-	//}
+	for (int i = 5; i < entities.size(); i++) {
+		entities[i]->GetTransform()->SetPosition(RandomRange(-5, 5), RandomRange(-5, 5), RandomRange(-5, 5));
+		entities[i]->GetTransform()->SetScale(RandomRange(0.1, 1));
+	}
 
 	RaytracingHelper::GetInstance().CreateTopLevelAccelerationStructureForScene(entities);
 }
@@ -443,6 +454,11 @@ void Game::Update(float deltaTime, float totalTime)
 	entities[2]->GetTransform()->Rotate(0, 0, deltaTime);
 	entities[3]->GetTransform()->Rotate(deltaTime, 0, 0);
 	//entities[3]->GetTransform()->MoveRelative((float)sin(totalTime) / 4, 0, 0);
+
+	for (int i = 5; i < entities.size(); i++) {
+
+		entities[i]->GetTransform()->MoveRelative(0.01 * sin(totalTime), 0, 0.01 * cos(totalTime));
+	}
 
 	camera->Update(deltaTime);
 }
