@@ -21,11 +21,53 @@ static const uint VertexSizeInBytes = 11 * 4; // 11 floats total per vertex * 4 
 struct RayPayload
 {
 	float3 color;
+	uint recursionDepth;
+	uint rayPerPixelIndex;
 };
 
 // Note: We'll be using the built-in BuiltInTriangleIntersectionAttributes struct
 // for triangle attributes, so no need to define our own.  It contains a single float2.
 
+//helper functions for pathtracing
+//from from Chris's Real-Time Pathtracing Basics lecture
+float Rand(float2 uv) {
+	//function borrowed from https://thebookofshaders.com/10/
+	return frac(sin(dot(uv, float2(12.9898, 78.233))) * 43758.5453);
+}
+
+//further helper funcs to generate random
+float2 Rand2(float2 uv) {
+	float x = rand(uv);
+	float y = sqrt(1 - x * x);
+	return float2(x, y);
+}
+
+float3 Rand3(float2 uv) {
+	return float3(rand2(uv), rand(uv.yx));
+}
+
+float3 RandomVector(float u0, float u1) {
+	float a = u0 * 2 - 1;
+	float b = sqrt(1 - a * a);
+	float phi = 2.0f * PI * u1;
+	
+	float x = b * cos(phi);
+	float y = b * sin(phi);
+	float z = a;
+	
+	return float3(x, y, z);
+}
+
+float3 RandomCosineWeightedHemisphere(float u0, float u1, float3 unitNormal)
+{
+	float a = u0 * 2 - 1;
+	float b = sqrt(1 - a * a);
+	float phi = 2.0f * PI * u1;
+	float x = unitNormal.x + b * cos(phi);
+	float y = unitNormal.y + b * sin(phi);
+	float z = unitNormal.z + a;
+	return float3(x, y, z);
+}
 
 
 // === Constant buffers ===
@@ -138,35 +180,49 @@ void RayGen()
 	// Get the ray indices
 	uint2 rayIndices = DispatchRaysIndex().xy;
 
-	// Calculate the ray data
-	float3 rayOrigin;
-	float3 rayDirection;
-	CalcRayFromCamera(rayIndices, rayOrigin, rayDirection);
+	float3 totalColor = float3(0, 0, 0);
+	int raysPerPixel = 25;
 
-	// Set up final ray description
-	RayDesc ray;
-	ray.Origin = rayOrigin;
-	ray.Direction = rayDirection;
-	ray.TMin = 0.0001f;
-	ray.TMax = 1000.0f;
+	//loop for each pixel, offset ray slightly
+	for (int i = 0; i < raysPerPixel; i++) {
+		float2 adjestedIndices = (float2)rayIndices;
+		adjustedIndices += rand((float)r / raysPerPixel);
 
-	// Set up the payload for the ray
-	// This initializes the struct to all zeros
-	RayPayload payload = (RayPayload)0;
+		// Calculate the ray data
+		float3 rayOrigin;
+		float3 rayDirection;
+		CalcRayFromCamera(rayIndices, rayOrigin, rayDirection);
 
-	// Perform the ray trace for this ray
-	TraceRay(
-		SceneTLAS,
-		RAY_FLAG_NONE,
-		0xFF,
-		0,
-		0,
-		0,
-		ray,
-		payload);
+		// Set up final ray description
+		RayDesc ray;
+		ray.Origin = rayOrigin;
+		ray.Direction = rayDirection;
+		ray.TMin = 0.0001f;
+		ray.TMax = 1000.0f;
+
+		// Set up the payload for the ray
+		// This initializes the struct to all zeros
+		RayPayload payload = (RayPayload)0;
+
+		// Perform the ray trace for this ray
+		TraceRay(
+			SceneTLAS,
+			RAY_FLAG_NONE,
+			0xFF,
+			0,
+			0,
+			0,
+			ray,
+			payload);
+
+		totalColor += payload.color;
+	}
+
+	//average the color
+	totalColor /= raysPerPixel;
 
 	// Set the final color of the buffer (gamma corrected)
-	OutputColor[rayIndices] = float4(pow(payload.color, 1.0f / 2.2f), 1);
+	OutputColor[rayIndices] = float4(pow(totalColor, 1.0f / 2.2f), 1);
 }
 
 
