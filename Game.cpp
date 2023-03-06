@@ -293,24 +293,34 @@ void Game::LoadTexturesAndCreateMaterials()
 {
 	// Create some temporary variables to represent colors
 	// - Not necessary, just makes things more readable
-	XMFLOAT3 red = XMFLOAT3(1.0f, 0.0f, 0.0f);
-	XMFLOAT3 green = XMFLOAT3(0.0f, 1.0f, 0.0f);
-	XMFLOAT3 blue = XMFLOAT3(0.0f, 0.0f, 1.0f);
-	XMFLOAT3 white = XMFLOAT3(1.0f, 1.0f, 1.0f);
+	XMFLOAT4 red = XMFLOAT4(1.0f, 1.0f, 1.0f, 0.0f);
+	XMFLOAT4 green = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);
+	XMFLOAT4 blue = XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);
+	XMFLOAT4 grey = XMFLOAT4(0.7f, 0.7f, 0.7f, 1.0f);
 
 	//bronze material
-	materials.push_back(std::make_shared<Material>(pipelineState, red));
+	materials.push_back(std::make_shared<Material>(pipelineState, red, MaterialType::Transparent));
 	//cobblestone
 	materials.push_back(std::make_shared<Material>(pipelineState, green));
 	//paint
 	materials.push_back(std::make_shared<Material>(pipelineState, blue));
 	//scratched
-	materials.push_back(std::make_shared<Material>(pipelineState));
+	materials.push_back(std::make_shared<Material>(pipelineState, grey));
 
 	//make a bunch of materials with random colors
 	for (int i = 0; i < NUM_SPHERES; i++) {
-		XMFLOAT3 randColor = XMFLOAT3(RandomRange(0, 0.99f), RandomRange(0, 0.99f), RandomRange(0, 0.99f));
-		materials.push_back(std::make_shared<Material>(pipelineState, randColor));
+		XMFLOAT4 randColor = XMFLOAT4(RandomRange(0, 1.0f), RandomRange(0, 1.0f), RandomRange(0, 1.0f), RandomRange(0,1.0f));
+		//random chance to be emissive or dielectric (glass)
+		MaterialType type = MaterialType::Normal;
+		int rng = RandomRange(0, 1.0f);
+		if (i%3 == 1) {
+			type = MaterialType::Emissive;
+			randColor.w = RandomRange(1.0f, 2.0f);//increase w to act as intensity
+		}
+		//else if (i%3==2) {
+		//	type = MaterialType::Transparent;
+		//}
+		materials.push_back(std::make_shared<Material>(pipelineState, randColor, type));
 	}
 
 	//add appropriate textures to each material
@@ -335,16 +345,16 @@ void Game::LoadTexturesAndCreateMaterials()
 	//materials[3]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_roughness.png").c_str()), 3);
 
 	//
-	for (int i = 0; i < materials.size(); i++) {
+	//for (int i = 0; i < materials.size(); i++) {
 
-		//'fake' textures to prevent seg faults
-		materials[i]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_albedo.png").c_str()), 0);
-		materials[i]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_metal.png").c_str()), 1);
-		materials[i]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_normals.png").c_str()), 2);
-		materials[i]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_roughness.png").c_str()), 3);
+	//	//'fake' textures to prevent seg faults
+	//	materials[i]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_albedo.png").c_str()), 0);
+	//	materials[i]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_metal.png").c_str()), 1);
+	//	materials[i]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_normals.png").c_str()), 2);
+	//	materials[i]->AddTexture(dx12Helper->LoadTexture(FixPath(L"../../Assets/Textures/scratched_roughness.png").c_str()), 3);
 
-		materials[i]->FinalizeMaterial();
-	}
+	//	materials[i]->FinalizeMaterial();
+	//}
 }
 
 void Game::CreateEntities() 
@@ -353,28 +363,29 @@ void Game::CreateEntities()
 	entities.push_back(std::make_shared<GameEntity>(helixMesh, materials[1]));
 	entities.push_back(std::make_shared<GameEntity>(cubeMesh, materials[2]));
 	entities.push_back(std::make_shared<GameEntity>(cubeMesh, materials[3]));
-	entities.push_back(std::make_shared<GameEntity>(cubeMesh, materials[0]));
+	//ground should be grey
+	entities.push_back(std::make_shared<GameEntity>(cubeMesh, materials[3]));
 
 	//add a bunch of random sphere
 	for (int i = 0; i < NUM_SPHERES; i++) {
 		//4 basic colors for red, green, blue, and white
-		int index = RandomRange(0, NUM_SPHERES + 4);
+		int index = RandomRange(4, NUM_SPHERES + 4);
 		entities.push_back(std::make_shared<GameEntity>(sphereMesh, materials[index]));
 	}
 
 	//adjust transform to not be overlapping
-	entities[0]->GetTransform()->SetPosition(-5, 0, 0);
+	entities[0]->GetTransform()->SetPosition(0, 5, 0);
 	entities[1]->GetTransform()->SetPosition(5, 0, 0);
 	entities[2]->GetTransform()->SetPosition(0, 0, -5);
 	entities[3]->GetTransform()->SetPosition(0, 0, 5);
 	//make a big square to be the ground
-	entities[4]->GetTransform()->SetPosition(0, -24, 0);
+	entities[4]->GetTransform()->SetPosition(0, -13, 0);
 	entities[4]->GetTransform()->SetScale(25, 25, 25);
 
 	//move the spheres to random positions
 	for (int i = 5; i < entities.size(); i++) {
-		entities[i]->GetTransform()->SetPosition(RandomRange(-5, 5), RandomRange(-5, 5), RandomRange(-5, 5));
-		entities[i]->GetTransform()->SetScale(RandomRange(0.1, 1));
+		entities[i]->GetTransform()->SetPosition(RandomRange(-5, 5), 0, RandomRange(-5, 5));
+		entities[i]->GetTransform()->SetScale(RandomRange(0.1f, 0.5f));
 	}
 
 	RaytracingHelper::GetInstance().CreateTopLevelAccelerationStructureForScene(entities);
@@ -457,7 +468,7 @@ void Game::Update(float deltaTime, float totalTime)
 
 	for (int i = 5; i < entities.size(); i++) {
 
-		entities[i]->GetTransform()->MoveRelative(0.01 * sin(totalTime), 0, 0.01 * cos(totalTime));
+		entities[i]->GetTransform()->MoveRelative(0.01f * sin(totalTime + i), 0, 0.01f * cos(totalTime + i));
 	}
 
 	camera->Update(deltaTime);

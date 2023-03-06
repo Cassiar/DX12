@@ -11,22 +11,32 @@
 #include "Transform.h"
 #include "DX12Helper.h"
 
+enum MaterialType {
+	Normal,
+	Transparent,
+	Emissive
+};
+
 class Material
 {
 public:
 	Material(
 		Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState,
-		DirectX::XMFLOAT3 tint = DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f),
+		//defualt fully metal
+		DirectX::XMFLOAT4 tint = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f),
+		MaterialType type = MaterialType::Normal,
 		DirectX::XMFLOAT2 uvScale = DirectX::XMFLOAT2(1, 1),
 		DirectX::XMFLOAT2 uvOffset = DirectX::XMFLOAT2(0, 0));
 
 	DirectX::XMFLOAT2 GetUVScale();
 	DirectX::XMFLOAT2 GetUVOffset();
-	DirectX::XMFLOAT3 GetColorTint();
+	DirectX::XMFLOAT4 GetColorTint();
+	MaterialType GetType();
 
 	void SetUVScale(DirectX::XMFLOAT2 scale);
 	void SetUVOffset(DirectX::XMFLOAT2 offset);
-	void SetColorTint(DirectX::XMFLOAT3 tint);
+	void SetColorTint(DirectX::XMFLOAT4 tint);
+	void SetType(MaterialType type);
 
 	void AddTexture(D3D12_CPU_DESCRIPTOR_HANDLE srv, int slot);
 	//done adding textures
@@ -40,7 +50,8 @@ private:
 	bool finalized = false;
 
 	// Material properties
-	DirectX::XMFLOAT3 colorTint;
+	DirectX::XMFLOAT4 colorTint;
+	MaterialType type;
 
 	// Texture-related
 	DirectX::XMFLOAT2 uvOffset;

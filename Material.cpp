@@ -1,9 +1,10 @@
 #include "Material.h"
 
-Material::Material(Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState, DirectX::XMFLOAT3 tint, DirectX::XMFLOAT2 uvScale, DirectX::XMFLOAT2 uvOffset)
+Material::Material(Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState, DirectX::XMFLOAT4 tint, MaterialType type, DirectX::XMFLOAT2 uvScale, DirectX::XMFLOAT2 uvOffset)
 {
     this->pipelineState = pipelineState;
     colorTint = tint;
+    this->type = type;
     this->uvScale = uvScale;
     this->uvOffset = uvOffset;
 }
@@ -18,9 +19,13 @@ DirectX::XMFLOAT2 Material::GetUVOffset()
     return uvOffset;
 }
 
-DirectX::XMFLOAT3 Material::GetColorTint()
+DirectX::XMFLOAT4 Material::GetColorTint()
 {
     return colorTint;
+}
+
+MaterialType Material::GetType() {
+    return type;
 }
 
 void Material::SetUVScale(DirectX::XMFLOAT2 scale)
@@ -33,11 +38,14 @@ void Material::SetUVOffset(DirectX::XMFLOAT2 offset)
     uvOffset = offset;
 }
 
-void Material::SetColorTint(DirectX::XMFLOAT3 tint)
+void Material::SetColorTint(DirectX::XMFLOAT4 tint)
 {
     colorTint = tint;
 }
 
+void Material::SetType(MaterialType type) {
+    this->type = type;
+}
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> Material::GetPipelineState() 
 {

@@ -35,41 +35,6 @@ float Rand(float2 uv) {
 	return frac(sin(dot(uv, float2(12.9898, 78.233))) * 43758.5453);
 }
 
-//further helper funcs to generate random
-float2 Rand2(float2 uv) {
-	float x = Rand(uv);
-	float y = sqrt(1 - x * x);
-	return float2(x, y);
-}
-
-float3 Rand3(float2 uv) {
-	return float3(Rand2(uv), Rand(uv.yx));
-}
-
-float3 RandomVector(float u0, float u1) {
-	float a = u0 * 2 - 1;
-	float b = sqrt(1 - a * a);
-	float phi = 2.0f * PI * u1;
-	
-	float x = b * cos(phi);
-	float y = b * sin(phi);
-	float z = a;
-	
-	return float3(x, y, z);
-}
-
-float3 RandomCosineWeightedHemisphere(float u0, float u1, float3 unitNormal)
-{
-	float a = u0 * 2 - 1;
-	float b = sqrt(1 - a * a);
-	float phi = 2.0f * PI * u1;
-	float x = unitNormal.x + b * cos(phi);
-	float y = unitNormal.y + b * sin(phi);
-	float z = unitNormal.z + a;
-	return float3(x, y, z);
-}
-
-
 // === Constant buffers ===
 
 cbuffer SceneData : register(b0)
@@ -152,6 +117,18 @@ Vertex InterpolateVertices(uint triangleIndex, float3 barycentricData)
 	return vert;
 }
 
+//helper function to calculate barycentric data and vertex data
+Vertex GetHitDetails(uint triangleIndex, BuiltInTriangleIntersectionAttributes hitAttributes) {
+	// Calculate the barycentric data for vertex interpolation
+	float3 barycentricData = float3(
+		1.0f - hitAttributes.barycentrics.x - hitAttributes.barycentrics.y,
+		hitAttributes.barycentrics.x,
+		hitAttributes.barycentrics.y);
+
+	// Get the interpolated vertex data
+	return InterpolateVertices(triangleIndex, barycentricData);
+}
+
 // Calculates an origin and direction from the camera fpr specific pixel indices
 void CalcRayFromCamera(float2 rayIndices, out float3 origin, out float3 direction)
 {
@@ -169,6 +146,63 @@ void CalcRayFromCamera(float2 rayIndices, out float3 origin, out float3 directio
 	direction = normalize(worldPos.xyz - origin);
 }
 
+//further helper funcs to generate random
+float2 Rand2(float2 uv) {
+	float x = Rand(uv);
+	float y = sqrt(1 - x * x);
+	return float2(x, y);
+}
+
+float3 Rand3(float2 uv) {
+	return float3(Rand2(uv), Rand(uv.yx));
+}
+
+float3 RandomVector(float u0, float u1) {
+	float a = u0 * 2 - 1;
+	float b = sqrt(1 - a * a);
+	float phi = 2.0f * PI * u1;
+
+	float x = b * cos(phi);
+	float y = b * sin(phi);
+	float z = a;
+
+	return float3(x, y, z);
+}
+
+float3 RandomCosineWeightedHemisphere(float u0, float u1, float3 unitNormal)
+{
+	float a = u0 * 2 - 1;
+	float b = sqrt(1 - a * a);
+	float phi = 2.0f * PI * u1;
+	float x = unitNormal.x + b * cos(phi);
+	float y = unitNormal.y + b * sin(phi);
+	float z = unitNormal.z + a;
+	return float3(x, y, z);
+}
+
+//helper funcs for refaction
+// Fresnel approximation
+float FresnelSchlick(float NdotV, float indexOfRefraction)
+{
+	float r0 = pow((1.0f - indexOfRefraction) / (1.0f + indexOfRefraction), 2.0f);
+	return r0 + (1.0f - r0) * pow(1 - NdotV, 5.0f);
+}
+
+// Refraction function that returns a bool depending on result
+bool TryRefract(float3 incident, float3 normal, float ior, out float3 refr)
+{
+	float NdotI = dot(normal, incident);
+	float k = 1.0f - ior * ior * (1.0f - NdotI * NdotI);
+
+	if (k < 0.0f)
+	{
+		refr = float3(0, 0, 0);
+		return false;
+	}
+
+	refr = ior * incident - (ior * NdotI + sqrt(k)) * normal;
+	return true;
+}
 
 // === Shaders ===
 
@@ -192,7 +226,7 @@ void RayGen()
 		// Calculate the ray data
 		float3 rayOrigin;
 		float3 rayDirection;
-		CalcRayFromCamera(rayIndices, rayOrigin, rayDirection);
+		CalcRayFromCamera(adjustedIndices, rayOrigin, rayDirection);
 
 		// Set up final ray description
 		RayDesc ray;
@@ -240,7 +274,8 @@ void Miss(inout RayPayload payload)
 
 	// Interpolate based on the direction of the ray
 	float interpolation = dot(normalize(WorldRayDirection()), float3(0, 1, 0)) * 0.5f + 0.5f;
-	payload.color = lerp(downColor, upColor, interpolation);
+	//multiple because we have multiple bounces
+	payload.color *= lerp(downColor, upColor, interpolation);
 }
 
 
@@ -249,36 +284,34 @@ void Miss(inout RayPayload payload)
 void ClosestHit(inout RayPayload payload, BuiltInTriangleIntersectionAttributes hitAttributes)
 {
 	//exit early if we've hit max recursion
-	if (payload.recursionDepth == 10) {
+	if (payload.recursionDepth >= 10) {
 		payload.color = float3(0, 0, 0);
+		return; //don't forget this CASSIAR!!!
 	}
 
 	// we've hit something so update color
 	payload.color *= entityColor[InstanceID()].rgb;
 
 	// Grab the index of the triangle we hit
-	uint triangleIndex = PrimitiveIndex();
-
-	// Calculate the barycentric data for vertex interpolation
-	float3 barycentricData = float3(
-		1.0f - hitAttributes.barycentrics.x - hitAttributes.barycentrics.y,
-		hitAttributes.barycentrics.x,
-		hitAttributes.barycentrics.y);
-
-	// Get the interpolated vertex data
-	Vertex interpolatedVert = InterpolateVertices(triangleIndex, barycentricData);
+	//and pass to helper func to get Vertex details
+	Vertex hit = GetHitDetails(PrimitiveIndex(), hitAttributes);
 
 	//calculate normal in world space
-	float3 normal_WS = normalize(mul(interpolatedVert.normal, (float3x3)ObjectToWorld4x3()));
+	float3 normal_WS = normalize(mul(hit.normal, (float3x3)ObjectToWorld4x3()));
 
 	//get a unique rng value to offset this ray from other from same pixel
 	float2 uv = (float2)DispatchRaysIndex() / (float2)DispatchRaysDimensions();
 	float2 rng = Rand2(uv * (payload.recursionDepth + 1) + payload.rayPerPixelIndex + RayTCurrent());
 
-	//for now perfect reflection
+	//lerp between perfect reflection and random bounce based on roughness
+	float3 refl = reflect(WorldRayDirection(), normal_WS);
+	float3 randomBounce = RandomCosineWeightedHemisphere(Rand(rng), Rand(rng.yx), normal_WS);
+	//use alpha channel as roughness
+	float3 dir = normalize(lerp(refl, randomBounce, saturate(pow(entityColor[InstanceID()].a,2))));
+
 	RayDesc ray;
 	ray.Origin = WorldRayOrigin() + (WorldRayDirection() * RayTCurrent());
-	ray.Direction = reflect(WorldRayDirection(), normal_WS);
+	ray.Direction = dir;// reflect(WorldRayDirection(), normal_WS);
 	ray.TMin = 0.0001f;
 	ray.TMax = 1000.0f;
 
@@ -291,4 +324,144 @@ void ClosestHit(inout RayPayload payload, BuiltInTriangleIntersectionAttributes 
 		0xFF, 0, 0, 0, //mask and offsets
 		ray,
 		payload);
+}
+
+//// Closest hit shader - Runs when a ray hits the closest surface
+//[shader("closesthit")]
+//void ClosestHitTransparent(inout RayPayload payload, BuiltInTriangleIntersectionAttributes hitAttributes)
+//{
+//	//exit early if we've hit max recursion
+//	if (payload.recursionDepth >= 10) {
+//		payload.color = float3(0, 0, 0);
+//		return; //don't forget this CASSIAR!!!
+//	}
+//
+//	// we've hit something so update color
+//	payload.color *= entityColor[InstanceID()].rgb;
+//
+//	// Grab the index of the triangle we hit
+//	//and pass to helper func to get Vertex details
+//	Vertex hit = GetHitDetails(PrimitiveIndex(), hitAttributes);
+//
+//	//calculate normal in world space
+//	float3 normal_WS = normalize(mul(hit.normal, (float3x3)ObjectToWorld4x3()));
+//
+//	//get a unique rng value to offset this ray from other from same pixel
+//	float2 uv = (float2)DispatchRaysIndex() / (float2)DispatchRaysDimensions();
+//	float2 rng = Rand2(uv * (payload.recursionDepth + 1) + payload.rayPerPixelIndex + RayTCurrent());
+//
+//	//get index of refraction depending on which side of object we're on (outside/inside)
+//	float ior = 1.5f;
+//	if (HitKind() == HIT_KIND_TRIANGLE_FRONT_FACE) {
+//		//invert ior for front faces
+//		ior = 1.0f / ior;
+//	}
+//	else {
+//		//invert normal for back faces
+//		normal_WS *= -1;
+//	}
+//
+//	//random chance for reflection instead of refraction
+//	float NdotV = dot(-WorldRayDirection(), normal_WS);
+//	bool reflectFresnel = FresnelSchlick(NdotV, ior) > Rand(rng);
+//
+//	//test for refraction
+//	float3 dir;
+//	if (reflectFresnel || !TryRefract(WorldRayDirection(), normal_WS, ior, dir)) {
+//			dir = reflect(WorldRayDirection(), normal_WS);
+//
+//	}
+//
+//	//lerp between perfect refraction/reflection and random bounce based on roughness squard
+//	float3 randomBounce = RandomCosineWeightedHemisphere(Rand(rng), Rand(rng.yx), normal_WS);
+//	//use alpha channel as roughness
+//	dir = normalize(lerp(dir, randomBounce, saturate(pow(entityColor[InstanceID()].a, 2))));
+//
+//	RayDesc ray;
+//	ray.Origin = WorldRayOrigin() + (WorldRayDirection() * RayTCurrent());
+//	ray.Direction = dir;// reflect(WorldRayDirection(), normal_WS);
+//	ray.TMin = 0.0001f;
+//	ray.TMax = 1000.0f;
+//
+//	//increase recursion depth
+//	payload.recursionDepth++;
+//
+//	TraceRay(
+//		SceneTLAS,
+//		RAY_FLAG_NONE,
+//		0xFF, 0, 0, 0, //mask and offsets
+//		ray,
+//		payload);
+//}
+
+// Closest hit shader - Runs when a ray hits the closest surface
+[shader("closesthit")]
+void ClosestHitTransparent(inout RayPayload payload, BuiltInTriangleIntersectionAttributes hitAttributes)
+{
+	// If we've reached the max recursion, we haven't hit a light source
+	if (payload.recursionDepth == 5)
+	{
+		payload.color = float3(0, 0, 0);
+		return;
+	}
+
+	// We've hit, so adjust the payload color by this instance's color
+	payload.color *= entityColor[InstanceID()].rgb;
+
+	// Get the geometry hit details and convert normal to world space
+	Vertex hit = GetHitDetails(PrimitiveIndex(), hitAttributes);
+	float3 normal_WS = normalize(mul(hit.normal, (float3x3)ObjectToWorld4x3()));
+
+	// Calc a unique RNG value for this ray, based on the "uv" of this pixel and other per-ray data
+	float2 uv = (float2)DispatchRaysIndex() / (float2)DispatchRaysDimensions();
+	float2 rng = Rand2(uv * (payload.recursionDepth + 1) + payload.rayPerPixelIndex + RayTCurrent());
+
+	// Get the index of refraction based on the side of the hit
+	float ior = 1.5f;
+	if (HitKind() == HIT_KIND_TRIANGLE_FRONT_FACE)
+	{
+		// Invert the index of refraction for front faces
+		ior = 1.0f / ior;
+	}
+	else
+	{
+		// Invert the normal for back faces
+		normal_WS *= -1;
+	}
+
+	// Random chance for reflection instead of refraction based on Fresnel
+	float NdotV = dot(-WorldRayDirection(), normal_WS);
+	bool reflectFresnel = FresnelSchlick(NdotV, ior) > Rand(rng);
+
+	// Test for refraction
+	float3 dir;
+	if (reflectFresnel || !TryRefract(WorldRayDirection(), normal_WS, ior, dir))
+		dir = reflect(WorldRayDirection(), normal_WS);
+
+	// Interpolate between refract/reflect and random bounce based on roughness squared
+	float3 randomBounce = RandomCosineWeightedHemisphere(Rand(rng), Rand(rng.yx), normal_WS);
+	dir = normalize(lerp(dir, randomBounce, saturate(pow(entityColor[InstanceID()].a, 2))));
+
+	// Create the new recursive ray
+	RayDesc ray;
+	ray.Origin = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
+	ray.Direction = dir;
+	ray.TMin = 0.0001f;
+	ray.TMax = 1000.0f;
+
+	// Recursive ray trace
+	payload.recursionDepth++;
+	TraceRay(
+		SceneTLAS,
+		RAY_FLAG_NONE,
+		0xFF, 0, 0, 0, // Mask and offsets
+		ray,
+		payload);
+}
+
+//closest hit for emissive objects
+[shader("closesthit")]
+void ClosestHitEmissive(inout RayPayload payload, BuiltInTriangleIntersectionAttributes hitAttributes) {
+	float4 color = entityColor[InstanceID()];
+	payload.color = color.rgb * color.a;//use a as intensity
 }
