@@ -71,6 +71,10 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);F:\College Semester 8\IGME590\RealTimeRayTracing\Vendor\imgui-1.87</IncludePath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);F:\College Semester 8\IGME590\RealTimeRayTracing\Vendor\imgui-1.87</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -111,10 +115,12 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>F:\College Semester 8\IGME590\RealTimeRayTracing\Vendor\imgui-1.87;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>F:\College Semester 8\IGME590\RealTimeRayTracing\Vendor\imgui-1.87;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <FxCompile>
       <ShaderModel>6.0</ShaderModel>
@@ -152,6 +158,14 @@
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="RaytracingHelper.cpp" />
     <ClCompile Include="Transform.cpp" />
+    <ClCompile Include="Vendor\imgui-1.87\imgui.cpp" />
+    <ClCompile Include="Vendor\imgui-1.87\imgui_demo.cpp" />
+    <ClCompile Include="Vendor\imgui-1.87\imgui_draw.cpp" />
+    <ClCompile Include="Vendor\imgui-1.87\imgui_impl_dx11.cpp" />
+    <ClCompile Include="Vendor\imgui-1.87\imgui_impl_dx12.cpp" />
+    <ClCompile Include="Vendor\imgui-1.87\imgui_impl_win32.cpp" />
+    <ClCompile Include="Vendor\imgui-1.87\imgui_tables.cpp" />
+    <ClCompile Include="Vendor\imgui-1.87\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BufferStructs.h" />
@@ -167,6 +181,15 @@
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="RaytracingHelper.h" />
     <ClInclude Include="Transform.h" />
+    <ClInclude Include="Vendor\imgui-1.87\imconfig.h" />
+    <ClInclude Include="Vendor\imgui-1.87\imgui.h" />
+    <ClInclude Include="Vendor\imgui-1.87\imgui_impl_dx11.h" />
+    <ClInclude Include="Vendor\imgui-1.87\imgui_impl_dx12.h" />
+    <ClInclude Include="Vendor\imgui-1.87\imgui_impl_win32.h" />
+    <ClInclude Include="Vendor\imgui-1.87\imgui_internal.h" />
+    <ClInclude Include="Vendor\imgui-1.87\imstb_rectpack.h" />
+    <ClInclude Include="Vendor\imgui-1.87\imstb_textedit.h" />
+    <ClInclude Include="Vendor\imgui-1.87\imstb_truetype.h" />
     <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <ItemGroup>

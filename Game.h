@@ -44,6 +44,8 @@ private:
 	//create lights for our pixel shader
 	void CreateLights();
 
+	void CreateGui(float deltaTime);
+
 	// Note the usage of ComPtr below
 	//  - This is a smart pointer for objects that abide by the
 	//     Component Object Model, which DirectX objects do
@@ -62,8 +64,8 @@ private:
 	DX12Helper* dx12Helper;
 
 	std::shared_ptr<Camera> camera;
-	unsigned int raysPerPixel = 50;
-	unsigned int maxRecursion = 10;
+	int raysPerPixel = 25;
+	int maxRecursion = 10;
 
 	//hold basic shapes for testing
 	std::shared_ptr<Mesh> sphereMesh;

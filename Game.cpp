@@ -6,6 +6,10 @@
 #include "DX12Helper.h"
 #include "RaytracingHelper.h"
 
+#include "Vendor/imgui-1.87/imgui.h"
+#include "imgui_impl_dx12.h"
+#include "imgui_impl_win32.h"
+
 // Needed for a helper function to load pre-compiled shader files
 #pragma comment(lib, "d3dcompiler.lib")
 #include <d3dcompiler.h>
@@ -75,6 +79,14 @@ Game::~Game()
 	DX12Helper::GetInstance().WaitForGPU();
 
 	//RaytracingHelper::GetINstance().
+	
+	//clear imgui
+	{
+		// Shutdown
+		ImGui_ImplDX12_Shutdown();
+		ImGui_ImplWin32_Shutdown();
+		ImGui::DestroyContext();
+	}
 
 	//delete dx12Helper;
 	delete& RaytracingHelper::GetInstance();
@@ -95,6 +107,26 @@ void Game::Init()
 		commandQueue,
 		commandList,
 		FixPath(L"Raytracing.cso"));
+
+	//init imgui
+	{
+		D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle;
+		D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle;
+
+		dx12Helper->ReserveSrvUavDescriptorHeapSlot(&cpuHandle, &gpuHandle);
+
+		// Initialize ImGui
+		IMGUI_CHECKVERSION();
+		ImGui::CreateContext();
+
+		// Pick a style
+		ImGui::StyleColorsDark();
+		//ImGui::StyleColorsClassic();
+
+		// Initialize helper Platform and Renderer backends (here we are using imgui_impl_win32.cpp and imgui_impl_dx11.cpp)
+		ImGui_ImplWin32_Init(this->hWnd);
+		ImGui_ImplDX12_Init(device.Get(), this->numBackBuffers, DXGI_FORMAT_R8G8B8A8_UNORM, DX12Helper::GetInstance().GetCBVSRVDescriptorHeap().Get(), cpuHandle, gpuHandle);
+	}
 
 	// Helper methods for loading shaders, creating some basic
 	// geometry to draw and some simple camera matrices.
@@ -449,6 +481,79 @@ void Game::OnResize()
 	RaytracingHelper::GetInstance().ResizeOutputUAV(windowWidth, windowHeight);
 }
 
+void Game::CreateGui(float deltaTime) {
+	Input& input = Input::GetInstance();
+	//static bool matEditorOpen = false;
+	{
+		// Reset input manager's gui state
+		// so we don't taint our own input
+		input.SetKeyboardCapture(false);
+		input.SetMouseCapture(false);
+
+		// Set io info
+		ImGuiIO& io = ImGui::GetIO();
+		//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+		io.DeltaTime = deltaTime;
+		io.DisplaySize.x = (float)this->windowWidth;
+		io.DisplaySize.y = (float)this->windowHeight;
+		io.KeyCtrl = input.KeyDown(VK_CONTROL);
+		io.KeyShift = input.KeyDown(VK_SHIFT);
+		io.KeyAlt = input.KeyDown(VK_MENU);
+		io.MousePos.x = (float)input.GetMouseX();
+		io.MousePos.y = (float)input.GetMouseY();
+		io.MouseDown[0] = input.MouseLeftDown();
+		io.MouseDown[1] = input.MouseRightDown();
+		io.MouseDown[2] = input.MouseMiddleDown();
+		io.MouseWheel = input.GetMouseWheel();
+		input.GetKeyArray(io.KeysDown, 256);
+		static bool lastFrameBuff[256];
+		for (int i = 32; i < 256; i++)
+		{
+			//Not perfect currently but it works somewhat
+			if (io.KeysDown[i] && !lastFrameBuff[i])
+				io.AddInputCharacter(i);
+
+			lastFrameBuff[i] = io.KeysDown[i];
+		}
+
+
+		// Reset the frame
+		ImGui_ImplDX12_NewFrame();
+		ImGui_ImplWin32_NewFrame();
+		ImGui::NewFrame();
+
+		input.SetKeyboardCapture(io.WantCaptureKeyboard);
+		input.SetMouseCapture(io.WantCaptureMouse);
+
+
+		ImGui::Begin("Raytracing Options");
+
+		//Keeps track of the fps in the ImGui UI
+		static float timer = 0.0f;
+		timer += deltaTime;
+		static int frameCount = 0;
+		static int lastFrameCount = frameCount;
+
+		frameCount++;
+		if (timer > 1.0f) {
+			timer = 0.0f;
+			lastFrameCount = frameCount;
+			frameCount = 0;
+		}
+
+		ImGui::Text("FPS: %i", lastFrameCount);
+
+		ImGui::PushID(1);
+		//first param is id of slider
+		ImGui::SliderInt("Rays Per Pixel: ", &raysPerPixel, 0, 100);
+		ImGui::SliderInt("Max recursion Depth: ", &maxRecursion, 0, 100);
+
+		ImGui::PopID();
+
+		ImGui::End();
+	}
+}
+
 // --------------------------------------------------------
 // Update your game here - user input, move objects, AI, etc.
 // --------------------------------------------------------
@@ -472,6 +577,8 @@ void Game::Update(float deltaTime, float totalTime)
 	}
 
 	camera->Update(deltaTime);
+
+	CreateGui(deltaTime);
 }
 
 // --------------------------------------------------------
@@ -590,7 +697,38 @@ void Game::Draw(float deltaTime, float totalTime)
 	//	}
 
 	//}
+
 	
+	//handle imgui command list orders
+	{
+		D3D12_RESOURCE_BARRIER rb = {};
+		rb.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		rb.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		rb.Transition.pResource = backBuffers[currentSwapBuffer].Get();
+		rb.Transition.StateBefore =	D3D12_RESOURCE_STATE_PRESENT;
+		rb.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		rb.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		commandList->ResourceBarrier(1, &rb);
+
+		//set pipeline requirements
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap = dx12Helper->GetCBVSRVDescriptorHeap();
+		commandList->SetDescriptorHeaps(1, descriptorHeap.GetAddressOf());
+		commandList->OMSetRenderTargets(1, &rtvHandles[currentSwapBuffer], true, &dsvHandle);
+
+		ImGui::Render();
+		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList.Get());
+
+		rb.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		rb.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		rb.Transition.pResource = backBuffers[currentSwapBuffer].Get();
+		rb.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		rb.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+		rb.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		commandList->ResourceBarrier(1, &rb);
+
+	}
+
+
 	// Present
 	{
 		// Transition back to present
