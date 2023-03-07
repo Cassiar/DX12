@@ -485,7 +485,7 @@ void Game::Draw(float deltaTime, float totalTime)
 	RaytracingHelper::GetInstance().CreateTopLevelAccelerationStructureForScene(entities);
 
 	RaytracingHelper::GetInstance().Raytrace(
-		camera, backBuffers[currentSwapBuffer]
+		camera, backBuffers[currentSwapBuffer], raysPerPixel, maxRecursion
 	);
 	
 	//=============================

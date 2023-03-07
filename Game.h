@@ -62,6 +62,8 @@ private:
 	DX12Helper* dx12Helper;
 
 	std::shared_ptr<Camera> camera;
+	unsigned int raysPerPixel = 50;
+	unsigned int maxRecursion = 10;
 
 	//hold basic shapes for testing
 	std::shared_ptr<Mesh> sphereMesh;

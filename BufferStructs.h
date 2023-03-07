@@ -26,6 +26,8 @@ struct PixelShaderExternalData {
 struct RaytracingSceneData {
 	DirectX::XMFLOAT4X4 inverseViewProjection;
 	DirectX::XMFLOAT3 cameraPosition;
+	unsigned int raysPerPixel;
+	unsigned int maxRecursion;
 };
 
 //must match raytracing shader define
