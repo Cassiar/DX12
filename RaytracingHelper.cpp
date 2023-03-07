@@ -677,6 +677,14 @@ MeshRaytracingData RaytracingHelper::CreateBottomLevelAccelerationStructureForMe
 		tablePointer += D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES; // Get past the identifier
 		tablePointer += 8; // Skip first descriptor, which is for a CBV
 		memcpy(tablePointer, &raytracingData.IndexBufferSRV, 8); // Copy descriptor to table
+	
+		//handle second hit group
+		tablePointer += shaderTableRecordSize;
+		memcpy(tablePointer, &raytracingData.IndexBufferSRV, 8);
+
+		//third group
+		tablePointer += shaderTableRecordSize;
+		memcpy(tablePointer, &raytracingData.IndexBufferSRV, 8);
 	}
 	shaderTable->Unmap(0, 0);
 

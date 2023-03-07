@@ -374,7 +374,7 @@ void Game::CreateEntities()
 	}
 
 	//adjust transform to not be overlapping
-	entities[0]->GetTransform()->SetPosition(0, 5, 0);
+	entities[0]->GetTransform()->SetPosition(0, 2.5f, 0);
 	entities[1]->GetTransform()->SetPosition(5, 0, 0);
 	entities[2]->GetTransform()->SetPosition(0, 0, -5);
 	entities[3]->GetTransform()->SetPosition(0, 0, 5);
