@@ -546,7 +546,7 @@ void Game::CreateGui(float deltaTime) {
 		ImGui::PushID(1);
 		//first param is id of slider
 		ImGui::SliderInt("Rays Per Pixel: ", &raysPerPixel, 0, 100);
-		ImGui::SliderInt("Max recursion Depth: ", &maxRecursion, 0, 100);
+		ImGui::SliderInt("Max recursion Depth: ", &maxRecursion, 0, D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH - 2);
 
 		ImGui::PopID();
 
@@ -592,7 +592,7 @@ void Game::Draw(float deltaTime, float totalTime)
 	RaytracingHelper::GetInstance().CreateTopLevelAccelerationStructureForScene(entities);
 
 	RaytracingHelper::GetInstance().Raytrace(
-		camera, backBuffers[currentSwapBuffer], raysPerPixel, maxRecursion
+		camera, backBuffers[currentSwapBuffer], raysPerPixel, maxRecursion, false
 	);
 	
 	//=============================
@@ -742,10 +742,10 @@ void Game::Draw(float deltaTime, float totalTime)
 		//commandList->ResourceBarrier(1, &rb);
 		
 		// Must occur BEFORE present
-		//DX12Helper::GetInstance().CloseExecuteAndResetCommandList();
-		DX12Helper::GetInstance().WaitForGPU();
-		commandAllocator->Reset();
-		commandList->Reset(commandAllocator.Get(), 0);
+		DX12Helper::GetInstance().CloseExecuteAndResetCommandList();
+		//DX12Helper::GetInstance().WaitForGPU();
+		//commandAllocator->Reset();
+		//commandList->Reset(commandAllocator.Get(), 0);
 		
 		// Present the current back buffer
 		bool vsyncNecessary = vsync || !deviceSupportsTearing || isFullscreen;
