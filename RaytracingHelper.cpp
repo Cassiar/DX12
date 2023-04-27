@@ -243,15 +243,19 @@ void RaytracingHelper::CreateRaytracingPipelineState(std::wstring raytracingShad
 
 	// === Miss shader ===
 	{
-		D3D12_EXPORT_DESC missExportDesc = {};
-		missExportDesc.Name = L"Miss";
-		missExportDesc.Flags = D3D12_EXPORT_FLAG_NONE;
+		D3D12_EXPORT_DESC missExportDesc[2] = {};
+		missExportDesc[0].Name = L"Miss";
+		missExportDesc[0].Flags = D3D12_EXPORT_FLAG_NONE;
+
+		//miss shader to track if pixel is in shadow
+		missExportDesc[1].Name = L"MissShadow";
+		missExportDesc[1].Flags = D3D12_EXPORT_FLAG_NONE;
 
 		D3D12_DXIL_LIBRARY_DESC	missLibDesc = {};
 		missLibDesc.DXILLibrary.BytecodeLength = blob->GetBufferSize();
 		missLibDesc.DXILLibrary.pShaderBytecode = blob->GetBufferPointer();
-		missLibDesc.NumExports = 1;
-		missLibDesc.pExports = &missExportDesc;
+		missLibDesc.NumExports = ARRAYSIZE(missExportDesc);
+		missLibDesc.pExports = missExportDesc;
 
 		D3D12_STATE_SUBOBJECT missSubObj = {};
 		missSubObj.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY;
@@ -324,22 +328,25 @@ void RaytracingHelper::CreateRaytracingPipelineState(std::wstring raytracingShad
 
 	// === Shader config (payload) ===
 	{
-		D3D12_RAYTRACING_SHADER_CONFIG shaderConfigDesc = {};
+		D3D12_RAYTRACING_SHADER_CONFIG shaderConfigDesc[2] = {};
 		// Float3 color, uint for recursion depth and ray pixel index
-		shaderConfigDesc.MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT3) + (sizeof(unsigned int) * 2);
-		shaderConfigDesc.MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2); // Float2 for barycentric coords
+		shaderConfigDesc[0].MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT3) + (sizeof(unsigned int) * 2);
+		shaderConfigDesc[0].MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2); // Float2 for barycentric coords
 
+		shaderConfigDesc[1].MaxPayloadSizeInBytes = sizeof(bool);
+		shaderConfigDesc[1].MaxAttributeSizeInBytes = sizeof(bool); //one bool to track if pixel is in shadow
+		
 		D3D12_STATE_SUBOBJECT shaderConfigSubObj = {};
 		shaderConfigSubObj.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG;
 		shaderConfigSubObj.pDesc = &shaderConfigDesc;
-
+		
 		subobjects[6] = shaderConfigSubObj;
 	}
 
 	// === Association - Payload and shaders ===
 	{
 		// Names of shaders that use the payload
-		const wchar_t* payloadShaderNames[] = { L"RayGen", L"Miss", L"HitGroup", L"HitGroupTransparent", L"HitGroupEmissive" };
+		const wchar_t* payloadShaderNames[] = { L"RayGen", L"Miss", L"MissShadow", L"HitGroup", L"HitGroupTransparent", L"HitGroupEmissive"};
 
 		D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION shaderPayloadAssociation = {};
 		shaderPayloadAssociation.NumExports = ARRAYSIZE(payloadShaderNames);
@@ -365,7 +372,7 @@ void RaytracingHelper::CreateRaytracingPipelineState(std::wstring raytracingShad
 	// === Association - Shaders and local root sig ===
 	{
 		// Names of shaders that use the root sig
-		const wchar_t* rootSigShaderNames[] = { L"RayGen", L"Miss", L"HitGroup", L"HitGroupTransparent", L"HitGroupEmissive" };
+		const wchar_t* rootSigShaderNames[] = { L"RayGen", L"Miss", L"MissShadow", L"HitGroup", L"HitGroupTransparent", L"HitGroupEmissive"};
 
 		// Add a state subobject for the association between the RayGen shader and the local root signature
 		D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION rootSigAssociation = {};

@@ -25,6 +25,13 @@ struct RayPayload
 	uint rayPerPixelIndex;
 };
 
+//used to determine if a point is in shadow
+//only needs bool to track that info
+struct ShadowRayPayload
+{
+	bool inShadow;
+};
+
 // Note: We'll be using the built-in BuiltInTriangleIntersectionAttributes struct
 // for triangle attributes, so no need to define our own.  It contains a single float2.
 
@@ -278,6 +285,10 @@ void Miss(inout RayPayload payload)
 	payload.color *= lerp(downColor, upColor, interpolation);
 }
 
+[shader("miss")]
+void MissShadow(inout ShadowRayPayload payload) {
+	payload.inShadow = false;
+}
 
 // Closest hit shader - Runs when a ray hits the closest surface
 [shader("closesthit")]
