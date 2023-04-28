@@ -243,13 +243,13 @@ void RaytracingHelper::CreateRaytracingPipelineState(std::wstring raytracingShad
 
 	// === Miss shader ===
 	{
-		D3D12_EXPORT_DESC missExportDesc[2] = {};
+		D3D12_EXPORT_DESC missExportDesc[1] = {};
 		missExportDesc[0].Name = L"Miss";
 		missExportDesc[0].Flags = D3D12_EXPORT_FLAG_NONE;
 
 		//miss shader to track if pixel is in shadow
-		missExportDesc[1].Name = L"MissShadow";
-		missExportDesc[1].Flags = D3D12_EXPORT_FLAG_NONE;
+		//missExportDesc[1].Name = L"MissShadow";
+		//missExportDesc[1].Flags = D3D12_EXPORT_FLAG_NONE;
 
 		D3D12_DXIL_LIBRARY_DESC	missLibDesc = {};
 		missLibDesc.DXILLibrary.BytecodeLength = blob->GetBufferSize();
@@ -343,10 +343,24 @@ void RaytracingHelper::CreateRaytracingPipelineState(std::wstring raytracingShad
 		subobjects[6] = shaderConfigSubObj;
 	}
 
+	//config second payload only used to track shadows
+	//{
+	//	D3D12_RAYTRACING_SHADER_CONFIG shadowShaderConfigDesc = {};
+
+	//	shadowShaderConfigDesc.MaxPayloadSizeInBytes = sizeof(bool);
+	//	shadowShaderConfigDesc.MaxAttributeSizeInBytes = sizeof(bool); //one bool to track if pixel is in shadow
+
+	//	D3D12_STATE_SUBOBJECT shadowShaderConfigSubObj = {};
+	//	shadowShaderConfigSubObj.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG;
+	//	shadowShaderConfigSubObj.pDesc = &shadowShaderConfigDesc;
+
+	//	subobjects[7] = shadowShaderConfigSubObj;
+	//}
+
 	// === Association - Payload and shaders ===
 	{
 		// Names of shaders that use the payload
-		const wchar_t* payloadShaderNames[] = { L"RayGen", L"Miss", L"MissShadow", L"HitGroup", L"HitGroupTransparent", L"HitGroupEmissive"};
+		const wchar_t* payloadShaderNames[] = { L"RayGen", L"Miss", L"HitGroup", L"HitGroupTransparent", L"HitGroupEmissive"};
 
 		D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION shaderPayloadAssociation = {};
 		shaderPayloadAssociation.NumExports = ARRAYSIZE(payloadShaderNames);
@@ -360,6 +374,23 @@ void RaytracingHelper::CreateRaytracingPipelineState(std::wstring raytracingShad
 		subobjects[7] = shaderPayloadAssociationObject;
 	}
 
+	// === Association - Shadow Payload and shaders ===
+	//{
+	//	// Names of shaders that use the payload
+	//	const wchar_t* shadowPayloadShaderNames[] = { L"MissShadow" };
+
+	//	D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION shadowShaderPayloadAssociation = {};
+	//	shadowShaderPayloadAssociation.NumExports = ARRAYSIZE(shadowPayloadShaderNames);
+	//	shadowShaderPayloadAssociation.pExports = shadowPayloadShaderNames;
+	//	shadowShaderPayloadAssociation.pSubobjectToAssociate = &subobjects[6]; // Payload config above!
+
+	//	D3D12_STATE_SUBOBJECT shadowShaderPayloadAssociationObject = {};
+	//	shadowShaderPayloadAssociationObject.Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION;
+	//	shadowShaderPayloadAssociationObject.pDesc = &shadowShaderPayloadAssociation;
+
+	//	subobjects[8] = shadowShaderPayloadAssociationObject;
+	//}
+
 	// === Local root signature ===
 	{
 		D3D12_STATE_SUBOBJECT localRootSigSubObj = {};
@@ -372,7 +403,7 @@ void RaytracingHelper::CreateRaytracingPipelineState(std::wstring raytracingShad
 	// === Association - Shaders and local root sig ===
 	{
 		// Names of shaders that use the root sig
-		const wchar_t* rootSigShaderNames[] = { L"RayGen", L"Miss", L"MissShadow", L"HitGroup", L"HitGroupTransparent", L"HitGroupEmissive"};
+		const wchar_t* rootSigShaderNames[] = { L"RayGen", L"Miss", L"HitGroup", L"HitGroupTransparent", L"HitGroupEmissive"};
 
 		// Add a state subobject for the association between the RayGen shader and the local root signature
 		D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION rootSigAssociation = {};
@@ -386,6 +417,24 @@ void RaytracingHelper::CreateRaytracingPipelineState(std::wstring raytracingShad
 
 		subobjects[9] = rootSigAssociationSubObj;
 	}
+
+	// === Association - shadow Shaders and local root sig ===
+	//{
+	//	// Names of shaders that use the root sig
+	//	const wchar_t* shadowRootSigShaderNames[] = { L"MissShadow" };
+
+	//	// Add a state subobject for the association between the RayGen shader and the local root signature
+	//	D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION shadowRootSigAssociation = {};
+	//	shadowRootSigAssociation.NumExports = ARRAYSIZE(shadowRootSigShaderNames);
+	//	shadowRootSigAssociation.pExports = shadowRootSigShaderNames;
+	//	shadowRootSigAssociation.pSubobjectToAssociate = &subobjects[9]; // Root sig above
+
+	//	D3D12_STATE_SUBOBJECT shadowRootSigAssociationSubObj = {};
+	//	shadowRootSigAssociationSubObj.Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION;
+	//	shadowRootSigAssociationSubObj.pDesc = &shadowRootSigAssociation;
+
+	//	subobjects[11] = shadowRootSigAssociationSubObj;
+	//}
 
 	// === Global root sig ===
 	{
@@ -469,6 +518,9 @@ void RaytracingHelper::CreateShaderTable()
 
 	memcpy(shaderTableData, raytracingPipelineProperties->GetShaderIdentifier(L"Miss"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 	shaderTableData += shaderTableRecordSize;
+
+	//memcpy(shaderTableData, raytracingPipelineProperties->GetShaderIdentifier(L"MissShadow"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+	//shaderTableData += shaderTableRecordSize;
 
 	// Make sure each entry in the shader table has the proper identifier
 	for (unsigned int i = 0; i < MAX_HIT_GROUPS_IN_SHADER_TABLE / NUM_HIT_GROUPS * NUM_HIT_GROUPS; i += NUM_HIT_GROUPS)
@@ -898,6 +950,7 @@ void RaytracingHelper::Raytrace(
 	sceneData.cameraPosition = camera->GetTransform()->GetPosition();
 	sceneData.raysPerPixel = raysPerPixel;
 	sceneData.maxRecursion = maxRecursion;
+	sceneData.lightSourcePosition = XMFLOAT3(0, 5, 0);
 	
 	DirectX::XMFLOAT4X4 view = camera->GetView();
 	DirectX::XMFLOAT4X4 proj = camera->GetProjection();

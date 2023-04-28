@@ -28,6 +28,7 @@ struct RaytracingSceneData {
 	DirectX::XMFLOAT3 cameraPosition;
 	unsigned int raysPerPixel;
 	unsigned int maxRecursion;
+	DirectX::XMFLOAT3 lightSourcePosition;
 };
 
 //must match raytracing shader define

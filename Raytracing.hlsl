@@ -50,7 +50,8 @@ cbuffer SceneData : register(b0)
 	float3 cameraPosition;
 	uint raysPerPixel;
 	uint maxRecursion;
-	float3 padding;
+	float3 lightSourcePos;
+
 };
 
 
@@ -285,10 +286,10 @@ void Miss(inout RayPayload payload)
 	payload.color *= lerp(downColor, upColor, interpolation);
 }
 
-[shader("miss")]
-void MissShadow(inout ShadowRayPayload payload) {
-	payload.inShadow = false;
-}
+//[shader("miss")]
+//void MissShadow(inout ShadowRayPayload payload) {
+//	payload.inShadow = false;
+//}
 
 // Closest hit shader - Runs when a ray hits the closest surface
 [shader("closesthit")]
@@ -299,6 +300,30 @@ void ClosestHit(inout RayPayload payload, BuiltInTriangleIntersectionAttributes 
 		payload.color = float3(0, 0, 0);
 		return; //don't forget this CASSIAR!!!
 	}
+
+	//RayDesc shadowRay;
+	//shadowRay.Origin = WorldRayOrigin() + (WorldRayDirection() * RayTCurrent());
+	//shadowRay.Direction = normalize(lightSourcePos - WorldRayOrigin());
+	//shadowRay.TMin = 0.0001f;
+	//shadowRay.TMax = distance(WorldRayOrigin(), lightSourcePos);
+
+	////shadow ray
+	//ShadowRayPayload shadowPayload;
+	//shadowPayload.inShadow = true;
+
+	//TraceRay(SceneTLAS,
+	//	RAY_FLAG_NONE,
+	//	0xFF,
+	//	0,
+	//	0,
+	//	0,
+	//	shadowRay,
+	//	shadowPayload);
+
+	//if (shadowPayload.inShadow) {
+	//	//payload.color = float3(0, 0, 0);
+	//	return;
+	//}
 
 	// we've hit something so update color
 	payload.color *= entityColor[InstanceID()].rgb;
