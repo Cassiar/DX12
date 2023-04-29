@@ -309,9 +309,15 @@ void ClosestHit(inout RayPayload payload, BuiltInTriangleIntersectionAttributes 
 	}
 
 	float3 worldOrigin = WorldRayOrigin() + (WorldRayDirection() * RayTCurrent());
+	// Grab the index of the triangle we hit
+	//and pass to helper func to get Vertex details
+	Vertex hit = GetHitDetails(PrimitiveIndex(), hitAttributes);
+
+	//calculate normal in world space
+	float3 normal_WS = normalize(mul(hit.normal, (float3x3)ObjectToWorld4x3()));
 
 	RayDesc shadowRay;
-	shadowRay.Origin = worldOrigin;
+	shadowRay.Origin = worldOrigin + normal_WS * 0.02f;//offset tiny amount to make smoother shadow edges
 	shadowRay.Direction = normalize(lightSourcePos - worldOrigin);
 	shadowRay.TMin = 0.0001f;
 	shadowRay.TMax = distance(worldOrigin, lightSourcePos);
@@ -341,13 +347,6 @@ void ClosestHit(inout RayPayload payload, BuiltInTriangleIntersectionAttributes 
 
 	// we've hit something so update color
 	payload.color *= entityColor[InstanceID()].rgb;
-
-	// Grab the index of the triangle we hit
-	//and pass to helper func to get Vertex details
-	Vertex hit = GetHitDetails(PrimitiveIndex(), hitAttributes);
-
-	//calculate normal in world space
-	float3 normal_WS = normalize(mul(hit.normal, (float3x3)ObjectToWorld4x3()));
 
 	//get a unique rng value to offset this ray from other from same pixel
 	float2 uv = (float2)DispatchRaysIndex() / (float2)DispatchRaysDimensions();

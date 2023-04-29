@@ -1,0 +1,1 @@
+I added raytraced shadows. Everytime we there's a closest hit I send a ray to the light source to check if the pixel is in shadow. 
