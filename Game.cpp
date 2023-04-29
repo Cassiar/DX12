@@ -547,6 +547,7 @@ void Game::CreateGui(float deltaTime) {
 		//first param is id of slider
 		ImGui::SliderInt("Rays Per Pixel: ", &raysPerPixel, 0, 100);
 		ImGui::SliderInt("Max recursion Depth: ", &maxRecursion, 0, D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH - 2);
+		ImGui::Checkbox("Freeze Objects", &freeze);
 
 		ImGui::PopID();
 
@@ -563,20 +564,22 @@ void Game::Update(float deltaTime, float totalTime)
 	if (Input::GetInstance().KeyDown(VK_ESCAPE)) {
 		Quit();
 	}
+	if (!freeze) {
 
-	//entities[0]->GetTransform()->MoveRelative(0, (float)cos(totalTime) / 4, 0);
-	entities[0]->GetTransform()->Rotate(deltaTime, deltaTime, 0);
-	entities[1]->GetTransform()->Rotate(0, deltaTime, 0);
-	entities[2]->GetTransform()->Rotate(0, 0, deltaTime);
-	//entities[3]->GetTransform()->Rotate(deltaTime, 0, 0);
-	//entities[3]->GetTransform()->MoveRelative((float)sin(totalTime) / 4, 0, 0);
+		//entities[0]->GetTransform()->MoveRelative(0, (float)cos(totalTime) / 4, 0);
+		entities[0]->GetTransform()->Rotate(deltaTime, deltaTime, 0);
+		entities[1]->GetTransform()->Rotate(0, deltaTime, 0);
+		entities[2]->GetTransform()->Rotate(0, 0, deltaTime);
+		//entities[3]->GetTransform()->Rotate(deltaTime, 0, 0);
+		//entities[3]->GetTransform()->MoveRelative((float)sin(totalTime) / 4, 0, 0);
 
-	for (int i = 4; i < entities.size(); i++) {
-		if (i % 2 == 0) {
-			entities[i]->GetTransform()->MoveRelative(0.05f * sin(totalTime + i), 0, 0);
-		}
-		else {
-			entities[i]->GetTransform()->MoveRelative(0, 0, 0.05f * cos(totalTime + i));
+		for (int i = 4; i < entities.size(); i++) {
+			if (i % 2 == 0) {
+				entities[i]->GetTransform()->MoveRelative(0.05f * sin(totalTime + i), 0, 0);
+			}
+			else {
+				entities[i]->GetTransform()->MoveRelative(0, 0, 0.05f * cos(totalTime + i));
+			}
 		}
 	}
 

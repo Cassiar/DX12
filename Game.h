@@ -79,5 +79,6 @@ private:
 	std::vector<Light> lights;
 	int lightCount;
 	bool showPointLights;
+	bool freeze = false;
 };
 
