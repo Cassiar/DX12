@@ -23,15 +23,15 @@ struct RayPayload
 	float3 color;
 	uint recursionDepth;
 	uint rayPerPixelIndex;
-	bool inShadow;
+	//bool inShadow;
 };
 
 //used to determine if a point is in shadow
 //only needs bool to track that info
-//struct ShadowRayPayload
-//{
-//	bool inShadow;
-//};
+struct ShadowRayPayload
+{
+	bool inShadow;
+};
 
 // Note: We'll be using the built-in BuiltInTriangleIntersectionAttributes struct
 // for triangle attributes, so no need to define our own.  It contains a single float2.
@@ -294,7 +294,7 @@ void Miss(inout RayPayload payload)
 }
 
 [shader("miss")]
-void MissShadow(inout RayPayload payload : SV_RayPayload) {
+void MissShadow(inout ShadowRayPayload payload : SV_RayPayload) {
 	payload.inShadow = false;
 }
 
@@ -317,7 +317,7 @@ void ClosestHit(inout RayPayload payload, BuiltInTriangleIntersectionAttributes 
 	shadowRay.TMax = distance(worldOrigin, lightSourcePos);
 
 	//shadow ray
-	RayPayload shadowPayload;
+	ShadowRayPayload shadowPayload;
 	shadowPayload.inShadow = true;
 
 	TraceRay(SceneTLAS,
@@ -331,6 +331,9 @@ void ClosestHit(inout RayPayload payload, BuiltInTriangleIntersectionAttributes 
 		shadowRay,
 		shadowPayload);
 
+	//the miss shadow will turn this value false
+	//so if we din't trigger the miss, we hit an 
+	//object and are in shadow
 	if (shadowPayload.inShadow) {
 		payload.color = float3(0, 0, 0);
 		return;

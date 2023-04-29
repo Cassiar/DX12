@@ -331,7 +331,7 @@ void Game::LoadTexturesAndCreateMaterials()
 	XMFLOAT4 grey = XMFLOAT4(0.7f, 0.7f, 0.7f, 1.0f);
 
 	//bronze material
-	materials.push_back(std::make_shared<Material>(pipelineState, red, MaterialType::Transparent));
+	//materials.push_back(std::make_shared<Material>(pipelineState, red, MaterialType::Transparent));
 	//cobblestone
 	materials.push_back(std::make_shared<Material>(pipelineState, green));
 	//paint
@@ -392,30 +392,30 @@ void Game::LoadTexturesAndCreateMaterials()
 void Game::CreateEntities() 
 {
 	entities.push_back(std::make_shared<GameEntity>(sphereMesh, materials[0]));
-	entities.push_back(std::make_shared<GameEntity>(helixMesh, materials[1]));
+	entities.push_back(std::make_shared<GameEntity>(helixMesh, materials[0]));
+	entities.push_back(std::make_shared<GameEntity>(cubeMesh, materials[1]));
 	entities.push_back(std::make_shared<GameEntity>(cubeMesh, materials[2]));
-	entities.push_back(std::make_shared<GameEntity>(cubeMesh, materials[3]));
 	//ground should be grey
-	entities.push_back(std::make_shared<GameEntity>(cubeMesh, materials[3]));
+	entities.push_back(std::make_shared<GameEntity>(cubeMesh, materials[2]));
 
 	//add a bunch of random sphere
 	for (int i = 0; i < NUM_SPHERES; i++) {
 		//4 basic colors for red, green, blue, and white
-		int index = RandomRange(4, NUM_SPHERES + 4);
+		int index = RandomRange(3, NUM_SPHERES + 3);
 		entities.push_back(std::make_shared<GameEntity>(sphereMesh, materials[index]));
 	}
 
 	//adjust transform to not be overlapping
-	entities[0]->GetTransform()->SetPosition(0, 2.5f, 0);
-	entities[1]->GetTransform()->SetPosition(5, 0, 0);
-	entities[2]->GetTransform()->SetPosition(0, 0, -5);
-	entities[3]->GetTransform()->SetPosition(0, 0, 5);
+	//entities[0]->GetTransform()->SetPosition(0, 2.5f, 0);
+	entities[0]->GetTransform()->SetPosition(5, 0, 0);
+	entities[1]->GetTransform()->SetPosition(0, 0, -5);
+	entities[2]->GetTransform()->SetPosition(0, 0, 5);
 	//make a big square to be the ground
-	entities[4]->GetTransform()->SetPosition(0, -13, 0);
-	entities[4]->GetTransform()->SetScale(25, 25, 25);
+	entities[3]->GetTransform()->SetPosition(0, -13, 0);
+	entities[3]->GetTransform()->SetScale(25, 25, 25);
 
 	//move the spheres to random positions
-	for (int i = 5; i < entities.size(); i++) {
+	for (int i = 4; i < entities.size(); i++) {
 		entities[i]->GetTransform()->SetPosition(RandomRange(-5, 5), 0, RandomRange(-5, 5));
 		entities[i]->GetTransform()->SetScale(RandomRange(0.1f, 0.5f));
 	}
@@ -568,12 +568,16 @@ void Game::Update(float deltaTime, float totalTime)
 	entities[0]->GetTransform()->Rotate(deltaTime, deltaTime, 0);
 	entities[1]->GetTransform()->Rotate(0, deltaTime, 0);
 	entities[2]->GetTransform()->Rotate(0, 0, deltaTime);
-	entities[3]->GetTransform()->Rotate(deltaTime, 0, 0);
+	//entities[3]->GetTransform()->Rotate(deltaTime, 0, 0);
 	//entities[3]->GetTransform()->MoveRelative((float)sin(totalTime) / 4, 0, 0);
 
-	for (int i = 5; i < entities.size(); i++) {
-
-		entities[i]->GetTransform()->MoveRelative(0.01f * sin(totalTime + i), 0, 0.01f * cos(totalTime + i));
+	for (int i = 4; i < entities.size(); i++) {
+		if (i % 2 == 0) {
+			entities[i]->GetTransform()->MoveRelative(0.05f * sin(totalTime + i), 0, 0);
+		}
+		else {
+			entities[i]->GetTransform()->MoveRelative(0, 0, 0.05f * cos(totalTime + i));
+		}
 	}
 
 	camera->Update(deltaTime);

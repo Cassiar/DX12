@@ -328,13 +328,13 @@ void RaytracingHelper::CreateRaytracingPipelineState(std::wstring raytracingShad
 
 	// === Shader config (payload) ===
 	{
-		D3D12_RAYTRACING_SHADER_CONFIG shaderConfigDesc = {};
+		D3D12_RAYTRACING_SHADER_CONFIG shaderConfigDesc[2] = {};
 		// Float3 color, uint for recursion depth and ray pixel index
-		shaderConfigDesc.MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT3) + (sizeof(unsigned int) * 3);
-		shaderConfigDesc.MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2); // Float2 for barycentric coords
+		shaderConfigDesc[0].MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT3) + (sizeof(unsigned int) * 2);
+		shaderConfigDesc[0].MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2); // Float2 for barycentric coords
 
-		//shaderConfigDesc[1].MaxPayloadSizeInBytes = sizeof(unsigned int);//one bool to track if pixel is in shadow
-		//shaderConfigDesc[1].MaxAttributeSizeInBytes = sizeof(unsigned int); 
+		shaderConfigDesc[1].MaxPayloadSizeInBytes = sizeof(unsigned int);//one bool to track if pixel is in shadow
+		shaderConfigDesc[1].MaxAttributeSizeInBytes = sizeof(unsigned int); 
 		
 		D3D12_STATE_SUBOBJECT shaderConfigSubObj = {};
 		shaderConfigSubObj.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG;
