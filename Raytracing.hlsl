@@ -23,14 +23,15 @@ struct RayPayload
 	float3 color;
 	uint recursionDepth;
 	uint rayPerPixelIndex;
+	bool inShadow;
 };
 
 //used to determine if a point is in shadow
 //only needs bool to track that info
-struct ShadowRayPayload
-{
-	bool inShadow;
-};
+//struct ShadowRayPayload
+//{
+//	bool inShadow;
+//};
 
 // Note: We'll be using the built-in BuiltInTriangleIntersectionAttributes struct
 // for triangle attributes, so no need to define our own.  It contains a single float2.
@@ -51,7 +52,7 @@ cbuffer SceneData : register(b0)
 	uint raysPerPixel;
 	uint maxRecursion;
 	float3 lightSourcePos;
-
+	bool inShadow;
 };
 
 
@@ -276,6 +277,12 @@ void RayGen()
 [shader("miss")]
 void Miss(inout RayPayload payload)
 {
+	//if we're in shadow (so we just launched the shadow
+	//check ray) then we set it to false and return
+	//if (payload.inShadow) {
+	//	payload.inShadow = false;
+	//	return;
+	//}
 	// Hemispheric gradient
 	float3 upColor = float3(0.3f, 0.5f, 0.95f);
 	float3 downColor = float3(1, 1, 1);
@@ -286,10 +293,10 @@ void Miss(inout RayPayload payload)
 	payload.color *= lerp(downColor, upColor, interpolation);
 }
 
-//[shader("miss")]
-//void MissShadow(inout ShadowRayPayload payload) {
-//	payload.inShadow = false;
-//}
+[shader("miss")]
+void MissShadow(inout RayPayload payload : SV_RayPayload) {
+	payload.inShadow = false;
+}
 
 // Closest hit shader - Runs when a ray hits the closest surface
 [shader("closesthit")]
@@ -301,29 +308,33 @@ void ClosestHit(inout RayPayload payload, BuiltInTriangleIntersectionAttributes 
 		return; //don't forget this CASSIAR!!!
 	}
 
-	//RayDesc shadowRay;
-	//shadowRay.Origin = WorldRayOrigin() + (WorldRayDirection() * RayTCurrent());
-	//shadowRay.Direction = normalize(lightSourcePos - WorldRayOrigin());
-	//shadowRay.TMin = 0.0001f;
-	//shadowRay.TMax = distance(WorldRayOrigin(), lightSourcePos);
+	float3 worldOrigin = WorldRayOrigin() + (WorldRayDirection() * RayTCurrent());
 
-	////shadow ray
-	//ShadowRayPayload shadowPayload;
-	//shadowPayload.inShadow = true;
+	RayDesc shadowRay;
+	shadowRay.Origin = worldOrigin;
+	shadowRay.Direction = normalize(lightSourcePos - worldOrigin);
+	shadowRay.TMin = 0.0001f;
+	shadowRay.TMax = distance(worldOrigin, lightSourcePos);
 
-	//TraceRay(SceneTLAS,
-	//	RAY_FLAG_NONE,
-	//	0xFF,
-	//	0,
-	//	0,
-	//	0,
-	//	shadowRay,
-	//	shadowPayload);
+	//shadow ray
+	RayPayload shadowPayload;
+	shadowPayload.inShadow = true;
 
-	//if (shadowPayload.inShadow) {
-	//	//payload.color = float3(0, 0, 0);
-	//	return;
-	//}
+	TraceRay(SceneTLAS,
+		RAY_FLAG_FORCE_OPAQUE //these flag mean we stop when we get any hit
+		| RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH //and don't execute the hit shader
+		| RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
+		0xFF,
+		0,
+		0,
+		1,//skip first miss shader and use second
+		shadowRay,
+		shadowPayload);
+
+	if (shadowPayload.inShadow) {
+		payload.color = float3(0, 0, 0);
+		return;
+	}
 
 	// we've hit something so update color
 	payload.color *= entityColor[InstanceID()].rgb;

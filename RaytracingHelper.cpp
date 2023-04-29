@@ -243,13 +243,13 @@ void RaytracingHelper::CreateRaytracingPipelineState(std::wstring raytracingShad
 
 	// === Miss shader ===
 	{
-		D3D12_EXPORT_DESC missExportDesc[1] = {};
+		D3D12_EXPORT_DESC missExportDesc[2] = {};
 		missExportDesc[0].Name = L"Miss";
 		missExportDesc[0].Flags = D3D12_EXPORT_FLAG_NONE;
 
 		//miss shader to track if pixel is in shadow
-		//missExportDesc[1].Name = L"MissShadow";
-		//missExportDesc[1].Flags = D3D12_EXPORT_FLAG_NONE;
+		missExportDesc[1].Name = L"MissShadow";
+		missExportDesc[1].Flags = D3D12_EXPORT_FLAG_NONE;
 
 		D3D12_DXIL_LIBRARY_DESC	missLibDesc = {};
 		missLibDesc.DXILLibrary.BytecodeLength = blob->GetBufferSize();
@@ -328,13 +328,13 @@ void RaytracingHelper::CreateRaytracingPipelineState(std::wstring raytracingShad
 
 	// === Shader config (payload) ===
 	{
-		D3D12_RAYTRACING_SHADER_CONFIG shaderConfigDesc[2] = {};
+		D3D12_RAYTRACING_SHADER_CONFIG shaderConfigDesc = {};
 		// Float3 color, uint for recursion depth and ray pixel index
-		shaderConfigDesc[0].MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT3) + (sizeof(unsigned int) * 2);
-		shaderConfigDesc[0].MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2); // Float2 for barycentric coords
+		shaderConfigDesc.MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT3) + (sizeof(unsigned int) * 3);
+		shaderConfigDesc.MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2); // Float2 for barycentric coords
 
-		shaderConfigDesc[1].MaxPayloadSizeInBytes = sizeof(bool);
-		shaderConfigDesc[1].MaxAttributeSizeInBytes = sizeof(bool); //one bool to track if pixel is in shadow
+		//shaderConfigDesc[1].MaxPayloadSizeInBytes = sizeof(unsigned int);//one bool to track if pixel is in shadow
+		//shaderConfigDesc[1].MaxAttributeSizeInBytes = sizeof(unsigned int); 
 		
 		D3D12_STATE_SUBOBJECT shaderConfigSubObj = {};
 		shaderConfigSubObj.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG;
@@ -360,7 +360,7 @@ void RaytracingHelper::CreateRaytracingPipelineState(std::wstring raytracingShad
 	// === Association - Payload and shaders ===
 	{
 		// Names of shaders that use the payload
-		const wchar_t* payloadShaderNames[] = { L"RayGen", L"Miss", L"HitGroup", L"HitGroupTransparent", L"HitGroupEmissive"};
+		const wchar_t* payloadShaderNames[] = { L"RayGen", L"Miss", L"MissShadow", L"HitGroup", L"HitGroupTransparent", L"HitGroupEmissive"};
 
 		D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION shaderPayloadAssociation = {};
 		shaderPayloadAssociation.NumExports = ARRAYSIZE(payloadShaderNames);
@@ -403,7 +403,7 @@ void RaytracingHelper::CreateRaytracingPipelineState(std::wstring raytracingShad
 	// === Association - Shaders and local root sig ===
 	{
 		// Names of shaders that use the root sig
-		const wchar_t* rootSigShaderNames[] = { L"RayGen", L"Miss", L"HitGroup", L"HitGroupTransparent", L"HitGroupEmissive"};
+		const wchar_t* rootSigShaderNames[] = { L"RayGen", L"Miss", L"MissShadow", L"HitGroup", L"HitGroupTransparent", L"HitGroupEmissive"};
 
 		// Add a state subobject for the association between the RayGen shader and the local root signature
 		D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION rootSigAssociation = {};
@@ -519,8 +519,8 @@ void RaytracingHelper::CreateShaderTable()
 	memcpy(shaderTableData, raytracingPipelineProperties->GetShaderIdentifier(L"Miss"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 	shaderTableData += shaderTableRecordSize;
 
-	//memcpy(shaderTableData, raytracingPipelineProperties->GetShaderIdentifier(L"MissShadow"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-	//shaderTableData += shaderTableRecordSize;
+	memcpy(shaderTableData, raytracingPipelineProperties->GetShaderIdentifier(L"MissShadow"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+	shaderTableData += shaderTableRecordSize;
 
 	// Make sure each entry in the shader table has the proper identifier
 	for (unsigned int i = 0; i < MAX_HIT_GROUPS_IN_SHADER_TABLE / NUM_HIT_GROUPS * NUM_HIT_GROUPS; i += NUM_HIT_GROUPS)
@@ -731,7 +731,7 @@ MeshRaytracingData RaytracingHelper::CreateBottomLevelAccelerationStructureForMe
 	shaderTable->Map(0, 0, (void**)&tablePointer);
 	{
 		// Get to the correct address in the table
-		tablePointer += shaderTableRecordSize * 2; // Get past raygen and miss shaders
+		tablePointer += shaderTableRecordSize * 3; // Get past raygen and miss shaders (2 miss shaders: normal, and shadow)
 		tablePointer += shaderTableRecordSize * raytracingData.HitGroupIndex * NUM_HIT_GROUPS; // Skip to this hit group
 		tablePointer += D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES; // Get past the identifier
 		tablePointer += 8; // Skip first descriptor, which is for a CBV
@@ -893,7 +893,7 @@ void RaytracingHelper::CreateTopLevelAccelerationStructureForScene(std::vector<s
 	// NOTE: Another place where ringbuffer style management based on frame sync would be a good idea!
 	unsigned char* tablePointer = 0;
 	shaderTable->Map(0, 0, (void**)&tablePointer);
-	tablePointer += shaderTableRecordSize * 2; // Get past raygen and miss shaders
+	tablePointer += shaderTableRecordSize * 3; // Get past raygen and miss shaders
 	for(int i = 0; i < entityData.size(); i++)
 	{
 		// Need to get to the first descriptor in this hit group's record
@@ -990,7 +990,7 @@ void RaytracingHelper::Raytrace(
 		dispatchDesc.MissShaderTable.StrideInBytes = shaderTableRecordSize;
 
 		// Hit group location in shader table
-		dispatchDesc.HitGroupTable.StartAddress = shaderTable->GetGPUVirtualAddress() + shaderTableRecordSize * 2; // Offset by 2 records
+		dispatchDesc.HitGroupTable.StartAddress = shaderTable->GetGPUVirtualAddress() + shaderTableRecordSize * 3; // Offset by 2 records
 		dispatchDesc.HitGroupTable.SizeInBytes = shaderTableRecordSize * (UINT64)MAX_HIT_GROUPS_IN_SHADER_TABLE;
 		dispatchDesc.HitGroupTable.StrideInBytes = shaderTableRecordSize;
 

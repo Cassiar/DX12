@@ -344,11 +344,11 @@ void Game::LoadTexturesAndCreateMaterials()
 		XMFLOAT4 randColor = XMFLOAT4(RandomRange(0, 1.0f), RandomRange(0, 1.0f), RandomRange(0, 1.0f), RandomRange(0,1.0f));
 		//random chance to be emissive or dielectric (glass)
 		MaterialType type = MaterialType::Normal;
-		int rng = RandomRange(0, 1.0f);
-		if (i%3 == 1) {
-			type = MaterialType::Emissive;
-			randColor.w = RandomRange(1.0f, 2.0f);//increase w to act as intensity
-		}
+		//int rng = RandomRange(0, 1.0f);
+		//if (i%3 == 1) {
+		//	type = MaterialType::Emissive;
+		//	randColor.w = RandomRange(1.0f, 2.0f);//increase w to act as intensity
+		//}
 		//else if (i%3==2) {
 		//	type = MaterialType::Transparent;
 		//}
