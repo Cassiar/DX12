@@ -67,7 +67,8 @@ public:
 	void CreateTopLevelAccelerationStructureForScene(std::vector<std::shared_ptr<GameEntity>> scene);
 
 	// Actual work
-	void Raytrace(std::shared_ptr<Camera> camera, Microsoft::WRL::ComPtr<ID3D12Resource> currentBackBuffer, unsigned int raysPerPixel, unsigned int maxRecursion, bool executeCommandList);
+	void Raytrace(std::shared_ptr<Camera> camera, Microsoft::WRL::ComPtr<ID3D12Resource> currentBackBuffer, unsigned int raysPerPixel, unsigned int maxRecursion,
+		DirectX::XMFLOAT3 lightSourcePos, bool executeCommandList);
 
 
 private:

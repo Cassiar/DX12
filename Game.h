@@ -80,5 +80,7 @@ private:
 	int lightCount;
 	bool showPointLights;
 	bool freeze = false;
+
+	DirectX::XMFLOAT3 lightSourcePosition;
 };
 

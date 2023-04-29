@@ -922,6 +922,7 @@ void RaytracingHelper::Raytrace(
 	Microsoft::WRL::ComPtr<ID3D12Resource> currentBackBuffer, 
 	unsigned int raysPerPixel, 
 	unsigned int maxRecursion,
+	XMFLOAT3 lightSourcePos,
 	bool executeCommandList)
 {
 	if (!dxrAvailable || !helperInitialized)
@@ -950,7 +951,7 @@ void RaytracingHelper::Raytrace(
 	sceneData.cameraPosition = camera->GetTransform()->GetPosition();
 	sceneData.raysPerPixel = raysPerPixel;
 	sceneData.maxRecursion = maxRecursion;
-	sceneData.lightSourcePosition = XMFLOAT3(0, 5, 0);
+	sceneData.lightSourcePosition = lightSourcePos;
 	
 	DirectX::XMFLOAT4X4 view = camera->GetView();
 	DirectX::XMFLOAT4X4 proj = camera->GetProjection();

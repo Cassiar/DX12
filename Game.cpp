@@ -47,8 +47,8 @@ Game::Game(HINSTANCE hInstance)
 	printf("Console window created successfully.  Feel free to printf() here.\n");
 #endif
 	
-	//ibView = {};
-	//vbView = {};
+	//create light source position
+	lightSourcePosition = XMFLOAT3(0, 5.0f, 0);
 
 	camera = make_shared<Camera>(
 		0.0f, 0.0f, -15.0f,	// Position
@@ -547,7 +547,11 @@ void Game::CreateGui(float deltaTime) {
 		//first param is id of slider
 		ImGui::SliderInt("Rays Per Pixel: ", &raysPerPixel, 0, 100);
 		ImGui::SliderInt("Max recursion Depth: ", &maxRecursion, 0, D3D12_RAYTRACING_MAX_DECLARABLE_TRACE_RECURSION_DEPTH - 2);
-		ImGui::Checkbox("Freeze Objects", &freeze);
+		ImGui::Checkbox("Freeze Objects: ", &freeze);
+		//add float slider for x,y,z pos of light source
+		ImGui::SliderFloat("Light Position X: ", &lightSourcePosition.x, -10.0f, 10.0f);
+		ImGui::SliderFloat("Light Position Y: ", &lightSourcePosition.y, -10.0f, 10.0f);
+		ImGui::SliderFloat("Light Position Z: ", &lightSourcePosition.z, -10.0f, 10.0f);
 
 		ImGui::PopID();
 
@@ -599,7 +603,7 @@ void Game::Draw(float deltaTime, float totalTime)
 	RaytracingHelper::GetInstance().CreateTopLevelAccelerationStructureForScene(entities);
 
 	RaytracingHelper::GetInstance().Raytrace(
-		camera, backBuffers[currentSwapBuffer], raysPerPixel, maxRecursion, false
+		camera, backBuffers[currentSwapBuffer], raysPerPixel, maxRecursion, lightSourcePosition, false
 	);
 	
 	//=============================
